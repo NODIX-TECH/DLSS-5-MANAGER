@@ -6,7 +6,7 @@
 
 <p align="center">
   <a href="https://github.com/NODIX-TECH/DLSS-5-MANAGER/releases/latest">
-    <img src="https://img.shields.io/badge/Download-Latest%20Release%20(v1.0.0)-00E575?style=for-the-badge&logo=windows" alt="Download Release" />
+    <img src="https://img.shields.io/badge/Download-Latest%20Release%20(v1.1.3)-00E575?style=for-the-badge&logo=windows" alt="Download Release" />
   </a>
 </p>
 

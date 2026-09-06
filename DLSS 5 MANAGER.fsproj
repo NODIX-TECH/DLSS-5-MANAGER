@@ -1,0 +1,93 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <OutputType>WinExe</OutputType>
+    <TargetFramework>net8.0</TargetFramework>
+    <ApplicationManifest>app.manifest</ApplicationManifest>
+    <ApplicationIcon>Assets\logo.ico</ApplicationIcon>
+    <AssemblyName>DLSS 5 MANAGER</AssemblyName>
+    <RootNamespace>DLSS_5_MANAGER</RootNamespace>
+
+    <!-- Authorship, rights & version stamped into the executable's file details. -->
+    <Product>DLSS 5 MANAGER</Product>
+    <AssemblyTitle>DLSS 5 MANAGER</AssemblyTitle>
+    <Company>NODIX TECH</Company>
+    <Authors>NODIX TECH</Authors>
+    <Description>DLSS 5 MANAGER — built by NODIX TECH, published by Numidia Studios.</Description>
+    <Copyright>© 2026 Numidia Studios. All rights reserved. Built by NODIX TECH.</Copyright>
+    <Version>1.1.6</Version>
+    <AssemblyVersion>1.1.6.0</AssemblyVersion>
+    <FileVersion>1.1.6.0</FileVersion>
+    <InformationalVersion>1.1.6</InformationalVersion>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <AvaloniaResource Include="Assets\**" />
+    <!-- The payload the installer deploys; must sit next to the built executable. -->
+    <Content Include="mod files\**" CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="PreserveNewest" />
+    <!-- UI translations, read at runtime. -->
+    <Content Include="languages\**" CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="PreserveNewest" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Compile Include="Models\GameItem.fs" />
+    <Compile Include="Services\Localization.fs" />
+    <Compile Include="Services\GameAnalyzer.fs" />
+    <Compile Include="Services\IconExtractor.fs" />
+    <Compile Include="Services\GameScanner.fs" />
+    <Compile Include="Services\ModInstaller.fs" />
+    <Compile Include="Services\AnalysisStore.fs" />
+    <Compile Include="Services\UpdateChecker.fs" />
+    <Compile Include="ViewModels\ViewModelBase.fs" />
+    <Compile Include="ViewModels\GameCardViewModel.fs" />
+    <Compile Include="ViewModels\MainViewModel.fs" />
+    <Compile Include="Views\MainWindow.axaml.fs" />
+    <Compile Include="ViewLocator.fs" />
+    <Compile Include="App.axaml.fs" />
+    <Compile Include="Program.fs" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Avalonia" Version="12.1.0" />
+    <PackageReference Include="Avalonia.Desktop" Version="12.1.0" />
+    <PackageReference Include="Avalonia.Themes.Fluent" Version="12.1.0" />
+    <PackageReference Include="Avalonia.Fonts.Inter" Version="12.1.0" />
+    <PackageReference Include="AvaloniaUI.DiagnosticsSupport" Version="2.2.3">
+      <IncludeAssets Condition="'$(Configuration)' != 'Debug'">None</IncludeAssets>
+      <PrivateAssets Condition="'$(Configuration)' != 'Debug'">All</PrivateAssets>
+    </PackageReference>
+    <PackageReference Include="CommunityToolkit.Mvvm" Version="8.4.2" />
+    <PackageReference Include="Microsoft.Win32.Registry" Version="5.0.0" />
+    <PackageReference Include="System.Drawing.Common" Version="8.0.0" />
+  </ItemGroup>
+
+  <!-- ================================================================= -->
+  <!-- SOURCE PROTECTION                                                  -->
+  <!-- Release builds are run through Obfuscar to rename the internal /   -->
+  <!-- private surface (fields, methods, closures, helper types) so the   -->
+  <!-- shipped assembly is hostile to decompilation. The public API is    -->
+  <!-- kept intact because Avalonia XAML, ViewLocator and JSON resolve    -->
+  <!-- those names at runtime (see Obfuscar.xml). Debug builds are never   -->
+  <!-- touched, so day-to-day development and debugging stay clean.       -->
+  <!-- ================================================================= -->
+  <!--
+    Runs after every Release build. Because the Publish target depends on Build,
+    this fires before the publish pipeline copies files out, so the published
+    (and self-contained / any-RID) assembly is obfuscated too. $(TargetDir) is
+    RID-aware, so win-x86 / win-x64 output folders are handled automatically.
+  -->
+  <Target Name="ObfuscateRelease" AfterTargets="Build" Condition="'$(Configuration)' == 'Release'">
+    <Exec Command="powershell -NoProfile -ExecutionPolicy Bypass -File &quot;$(MSBuildProjectDirectory)\obfuscate.ps1&quot; -Dir &quot;$(TargetDir.TrimEnd('\'))&quot; -Tool &quot;$(MSBuildProjectDirectory)\.obfuscar-tool\obfuscar.console.exe&quot;" />
+  </Target>
+
+  <!--
+    Publish copies the primary assembly straight from obj\, bypassing the
+    build-output copy above, so obfuscate the final published assembly too.
+    This is the one that actually ships.
+  -->
+  <Target Name="ObfuscatePublish" AfterTargets="Publish">
+    <PropertyGroup>
+      <_ObfPublishDir>$([System.IO.Path]::GetFullPath('$(PublishDir)').TrimEnd('\'))</_ObfPublishDir>
+    </PropertyGroup>
+    <Exec Command="powershell -NoProfile -ExecutionPolicy Bypass -File &quot;$(MSBuildProjectDirectory)\obfuscate.ps1&quot; -Dir &quot;$(_ObfPublishDir)&quot; -Tool &quot;$(MSBuildProjectDirectory)\.obfuscar-tool\obfuscar.console.exe&quot;" />
+  </Target>
+</Project>

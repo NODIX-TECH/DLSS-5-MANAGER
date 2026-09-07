@@ -1226,12 +1226,29 @@
                                                                                HorizontalAlignment="Center" VerticalAlignment="Center" />
                                                                 </Border>
 
-                                                                <!-- One quiet dot in the corner: the artwork stays the
-                                                                     subject, and the route is a hover away. -->
-                                                                <Border Classes="ModDot" IsVisible="{Binding HasModBadge}"
-                                                                        ToolTip.Tip="{Binding ModBadgeText}" ZIndex="10">
-                                                                            <Border />
-                                                                        </Border>
+																<!-- The mark a card wears once the mod is on it -->
+																<StackPanel Orientation="Horizontal" Spacing="6"
+																			HorizontalAlignment="Right" VerticalAlignment="Top"
+																			Margin="0,5,5,0" ZIndex="10">
+
+																	<Border Background="#59060A08"
+																			CornerRadius="4"
+																			Padding="6,1"
+																			Margin="0,11,2,0"
+																			IsVisible="{Binding HasModBadge}"
+																			ToolTip.Tip="{Binding ModBadgeText}">
+																		<TextBlock Text="{Binding ModBadgeText}"
+																				   FontSize="10"
+																				   FontWeight="ExtraBold"
+																				   Foreground="White" />
+																	</Border>
+
+																	<Border Classes="ModDot"
+																			IsVisible="{Binding HasModBadge}"
+																			ToolTip.Tip="{Binding ModBadgeText}">
+																		<Border />
+																	</Border>
+																</StackPanel>
 
                                                                 <!-- 4. Hover Action Hint: Frosted Glass Pill -->
                                                                 <Border Classes="HoverActionOverlay" CornerRadius="18" ClipToBounds="True" Background="#15000000" IsHitTestVisible="False">

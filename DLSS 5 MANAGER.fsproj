@@ -14,10 +14,26 @@
     <Authors>NODIX TECH</Authors>
     <Description>DLSS 5 MANAGER — built by NODIX TECH, published by Numidia Studios.</Description>
     <Copyright>© 2026 Numidia Studios. All rights reserved. Built by NODIX TECH.</Copyright>
-    <Version>1.1.6</Version>
-    <AssemblyVersion>1.1.6.0</AssemblyVersion>
-    <FileVersion>1.1.6.0</FileVersion>
-    <InformationalVersion>1.1.6</InformationalVersion>
+    <Version>1.1.8</Version>
+    <AssemblyVersion>1.1.8.0</AssemblyVersion>
+    <FileVersion>1.1.8.0</FileVersion>
+    <InformationalVersion>1.1.8</InformationalVersion>
+
+    <!-- ================================================================= -->
+    <!-- RUNTIME FOOTPRINT                                                  -->
+    <!-- A desktop tool that sits idle most of the time, so the runtime is  -->
+    <!-- tuned for a small resident set rather than for throughput.         -->
+    <!-- ================================================================= -->
+    <!-- Workstation GC: one heap instead of one per core. Server GC would
+         reserve hundreds of megabytes on a modern CPU for no benefit here. -->
+    <ServerGarbageCollection>false</ServerGarbageCollection>
+    <!-- No background GC thread and no extra heap headroom held for it. -->
+    <ConcurrentGarbageCollection>false</ConcurrentGarbageCollection>
+    <!-- Hand freed segments back to Windows instead of keeping them mapped,
+         which is what keeps the number in Task Manager high after a scan. -->
+    <RetainVMGarbageCollection>false</RetainVMGarbageCollection>
+    <!-- Re-JIT the paths that actually run hot; the rest stays at tier 0. -->
+    <TieredPGO>true</TieredPGO>
   </PropertyGroup>
 
   <ItemGroup>
@@ -31,6 +47,7 @@
   <ItemGroup>
     <Compile Include="Models\GameItem.fs" />
     <Compile Include="Services\Localization.fs" />
+    <Compile Include="Services\ExtrasStore.fs" />
     <Compile Include="Services\GameAnalyzer.fs" />
     <Compile Include="Services\IconExtractor.fs" />
     <Compile Include="Services\GameScanner.fs" />

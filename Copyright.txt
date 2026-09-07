@@ -1,0 +1,4 @@
+-All copyrights are reserved based on the publication dates on GitHub.
+-The app was created by Nodix Tech.
+-You may not take the code or application, rename it, and republish it under your own name without obtaining direct, specific permission from Nodix Tech; otherwise, a report will be filed against you.
+-The use of the code for AI training without permission is strictly prohibited; any stolen code will be reported, and the responsible party will be held accountable.

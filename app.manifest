@@ -5,11 +5,14 @@
        For more details visit https://learn.microsoft.com/en-us/windows/win32/sbscs/application-manifests -->
   <assemblyIdentity version="1.0.0.0" name="DLSS_5_MANAGER.Desktop"/>
 
-  <!-- Game folders live under Program Files, so writing mod files needs elevation. -->
+  <!-- Runs with the rights the user already has, so launching never raises a
+       UAC prompt. Most game libraries live on a data drive and need nothing
+       more; for one that sits under Program Files the installer says so and
+       asks for an elevated run, instead of demanding it from everybody. -->
   <trustInfo xmlns="urn:schemas-microsoft-com:asm.v2">
     <security>
       <requestedPrivileges xmlns="urn:schemas-microsoft-com:asm.v3">
-        <requestedExecutionLevel level="requireAdministrator" uiAccess="false" />
+        <requestedExecutionLevel level="asInvoker" uiAccess="false" />
       </requestedPrivileges>
     </security>
   </trustInfo>

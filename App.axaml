@@ -199,6 +199,31 @@
             </Setter>
         </Style>
 
+        <!-- Disabled (an install is running). The Fluent theme paints its own
+             pale background on a disabled button, which made every tab look
+             selected at once; these keep the selected one distinguishable. -->
+        <Style Selector="Button.SegmentedTab:disabled /template/ ContentPresenter#PART_ContentPresenter">
+            <Setter Property="Background" Value="Transparent" />
+            <Setter Property="BorderBrush" Value="Transparent" />
+        </Style>
+
+        <Style Selector="Button.SegmentedTab:disabled">
+            <Setter Property="Foreground" Value="#5A6068" />
+        </Style>
+
+        <Style Selector="Button.SegmentedTab.Active:disabled /template/ ContentPresenter#PART_ContentPresenter">
+            <Setter Property="Background">
+                <LinearGradientBrush StartPoint="0%,0%" EndPoint="100%,100%">
+                    <GradientStop Color="#2AFFFFFF" Offset="0.0" />
+                    <GradientStop Color="#14FFFFFF" Offset="1.0" />
+                </LinearGradientBrush>
+            </Setter>
+        </Style>
+
+        <Style Selector="Button.SegmentedTab.Active:disabled">
+            <Setter Property="Foreground" Value="#C7CDD4" />
+        </Style>
+
         <!-- Utility Action Buttons (Pure Translucent Glass - matches the app shell) -->
         <Style Selector="Button.EmptyActionBtn">
             <Setter Property="Focusable" Value="False" />
@@ -756,7 +781,7 @@
         <!-- ================================================================= -->
         <!-- FLOATING BACKGROUND ATMOSPHERIC ANIMATIONS                        -->
         <!-- ================================================================= -->
-        <Style Selector="Border.FloatOrb1">
+        <Style Selector="Panel.Motion Border.FloatOrb1">
             <Style.Animations>
                 <Animation Duration="0:0:16.0" IterationCount="Infinite" Easing="SineEaseInOut">
                     <KeyFrame Cue="0%">
@@ -783,7 +808,7 @@
             </Style.Animations>
         </Style>
 
-        <Style Selector="Border.FloatOrb2">
+        <Style Selector="Panel.Motion Border.FloatOrb2">
             <Style.Animations>
                 <Animation Duration="0:0:22.0" IterationCount="Infinite" Easing="SineEaseInOut">
                     <KeyFrame Cue="0%">
@@ -806,7 +831,7 @@
             </Style.Animations>
         </Style>
 
-        <Style Selector="Border.FloatOrb3">
+        <Style Selector="Panel.Motion Border.FloatOrb3">
             <Style.Animations>
                 <Animation Duration="0:0:14.0" IterationCount="Infinite" Easing="SineEaseInOut">
                     <KeyFrame Cue="0%">
@@ -829,7 +854,7 @@
             </Style.Animations>
         </Style>
 
-        <Style Selector="Border.FloatAurora1">
+        <Style Selector="Panel.Motion Border.FloatAurora1">
             <Style.Animations>
                 <Animation Duration="0:0:18.0" IterationCount="Infinite" Easing="SineEaseInOut">
                     <KeyFrame Cue="0%">
@@ -851,7 +876,7 @@
             </Style.Animations>
         </Style>
 
-        <Style Selector="Border.FloatAurora2">
+        <Style Selector="Panel.Motion Border.FloatAurora2">
             <Style.Animations>
                 <Animation Duration="0:0:24.0" IterationCount="Infinite" Easing="SineEaseInOut">
                     <KeyFrame Cue="0%">
@@ -873,7 +898,7 @@
             </Style.Animations>
         </Style>
 
-        <Style Selector="Border.FloatCrystal1">
+        <Style Selector="Panel.Motion Border.FloatCrystal1">
             <Style.Animations>
                 <Animation Duration="0:0:22.0" IterationCount="Infinite" Easing="SineEaseInOut">
                     <KeyFrame Cue="0%">
@@ -895,7 +920,7 @@
             </Style.Animations>
         </Style>
 
-        <Style Selector="Border.FloatCrystal2">
+        <Style Selector="Panel.Motion Border.FloatCrystal2">
             <Style.Animations>
                 <Animation Duration="0:0:18.0" IterationCount="Infinite" Easing="SineEaseInOut">
                     <KeyFrame Cue="0%">
@@ -917,7 +942,7 @@
             </Style.Animations>
         </Style>
 
-        <Style Selector="Border.FloatParticle1">
+        <Style Selector="Panel.Motion Border.FloatParticle1">
             <Style.Animations>
                 <Animation Duration="0:0:10.0" IterationCount="Infinite" Easing="SineEaseInOut">
                     <KeyFrame Cue="0%">
@@ -939,7 +964,7 @@
             </Style.Animations>
         </Style>
 
-        <Style Selector="Border.FloatParticle2">
+        <Style Selector="Panel.Motion Border.FloatParticle2">
             <Style.Animations>
                 <Animation Duration="0:0:13.0" IterationCount="Infinite" Easing="SineEaseInOut">
                     <KeyFrame Cue="0%">
@@ -961,7 +986,7 @@
             </Style.Animations>
         </Style>
 
-        <Style Selector="Border.FloatFlux1">
+        <Style Selector="Panel.Motion Border.FloatFlux1">
             <Style.Animations>
                 <Animation Duration="0:0:12.0" IterationCount="Infinite" Easing="SineEaseInOut">
                     <KeyFrame Cue="0%">
@@ -1216,6 +1241,121 @@
                 </LinearGradientBrush>
             </Setter>
             <Setter Property="BorderBrush" Value="#8000FF88" />
+        </Style>
+
+        <!-- A settings section title that folds its own contents away. It has
+             to look like the plain heading it replaces, so the button chrome
+             is stripped entirely and only the hover tint remains. -->
+        <Style Selector="Button.SectionHeader">
+            <Setter Property="Focusable" Value="False" />
+            <Setter Property="Background" Value="Transparent" />
+            <Setter Property="BorderThickness" Value="0" />
+            <Setter Property="Padding" Value="0" />
+            <Setter Property="CornerRadius" Value="10" />
+            <Setter Property="HorizontalAlignment" Value="Stretch" />
+            <Setter Property="HorizontalContentAlignment" Value="Stretch" />
+        </Style>
+
+        <!-- The whole title row is the hit target, but it must still read as a
+             heading: no button chrome at all, and nothing that fills the card. -->
+        <Style Selector="Button.SectionHeader /template/ ContentPresenter#PART_ContentPresenter">
+            <Setter Property="Background" Value="Transparent" />
+            <Setter Property="BorderThickness" Value="0" />
+        </Style>
+
+        <Style Selector="Button.SectionHeader:pointerover /template/ ContentPresenter#PART_ContentPresenter">
+            <Setter Property="Background" Value="Transparent" />
+        </Style>
+
+        <!-- The affordance lives in one small round control on the right, the
+             same shape as the fold button in the Manage sheet. -->
+        <Style Selector="Border.SectionChevron">
+            <Setter Property="Width" Value="24" />
+            <Setter Property="Height" Value="24" />
+            <Setter Property="CornerRadius" Value="12" />
+            <Setter Property="Background" Value="#10FFFFFF" />
+            <Setter Property="BorderBrush" Value="#1CFFFFFF" />
+            <Setter Property="BorderThickness" Value="1" />
+            <Setter Property="VerticalAlignment" Value="Center" />
+            <Setter Property="Transitions">
+                <Transitions>
+                    <BrushTransition Property="Background" Duration="0:0:0.15" />
+                    <BrushTransition Property="BorderBrush" Duration="0:0:0.15" />
+                </Transitions>
+            </Setter>
+        </Style>
+
+        <Style Selector="Button.SectionHeader:pointerover Border.SectionChevron">
+            <Setter Property="Background" Value="#22FFFFFF" />
+            <Setter Property="BorderBrush" Value="#38FFFFFF" />
+        </Style>
+
+        <Style Selector="Button.SectionHeader:pointerover TextBlock.SectionTitle">
+            <Setter Property="Foreground" Value="#E2E8F0" />
+        </Style>
+
+        <Style Selector="TextBlock.SectionTitle">
+            <Setter Property="FontSize" Value="11.5" />
+            <Setter Property="FontWeight" Value="Bold" />
+            <Setter Property="Foreground" Value="#94A3B8" />
+            <Setter Property="LetterSpacing" Value="0.5" />
+            <Setter Property="VerticalAlignment" Value="Center" />
+            <Setter Property="Transitions">
+                <Transitions>
+                    <BrushTransition Property="Foreground" Duration="0:0:0.15" />
+                </Transitions>
+            </Setter>
+        </Style>
+
+        <!-- Holds one family of chips - a route and its variants - so the
+             groups read apart instead of running together in one long row. -->
+        <Style Selector="Border.ChipGroup">
+            <Setter Property="CornerRadius" Value="12" />
+            <Setter Property="Padding" Value="3" />
+            <Setter Property="Background" Value="#0C1014" />
+            <Setter Property="BorderBrush" Value="#20FFFFFF" />
+            <Setter Property="BorderThickness" Value="1" />
+            <Setter Property="VerticalAlignment" Value="Center" />
+        </Style>
+
+        <!-- A route that already installs a file of the same name is ruled
+             out, and has to look ruled out. -->
+        <Style Selector="Border.ChipGroup:disabled">
+            <Setter Property="Opacity" Value="0.35" />
+        </Style>
+
+        <!-- The mark a card wears once the mod is on it: a small frosted bead
+             in the top-right corner. Says "done" without covering the artwork;
+             which route it was is on the tooltip. -->
+        <!-- A frosted halo with the bead floating in it, so it reads as part
+             of the glass rather than a sticker dropped on the artwork. -->
+        <Style Selector="Border.ModDot">
+            <Setter Property="Width" Value="20" />
+            <Setter Property="Height" Value="20" />
+            <Setter Property="CornerRadius" Value="10" />
+            <Setter Property="Margin" Value="0,9,9,0" />
+            <Setter Property="HorizontalAlignment" Value="Right" />
+            <Setter Property="VerticalAlignment" Value="Top" />
+            <Setter Property="BorderThickness" Value="1" />
+            <Setter Property="BorderBrush" Value="#33FFFFFF" />
+            <Setter Property="Background" Value="#59060A08" />
+            <Setter Property="BoxShadow" Value="0 2 8 0 #66000000" />
+        </Style>
+
+        <Style Selector="Border.ModDot > Border">
+            <Setter Property="Width" Value="9" />
+            <Setter Property="Height" Value="9" />
+            <Setter Property="CornerRadius" Value="5" />
+            <Setter Property="HorizontalAlignment" Value="Center" />
+            <Setter Property="VerticalAlignment" Value="Center" />
+            <Setter Property="Background">
+                <RadialGradientBrush Center="35%,28%" GradientOrigin="35%,28%" RadiusX="75%" RadiusY="75%">
+                    <GradientStop Color="#FFDFFFEE" Offset="0.0" />
+                    <GradientStop Color="#FF3BFFA6" Offset="0.45" />
+                    <GradientStop Color="#FF00C46E" Offset="1.0" />
+                </RadialGradientBrush>
+            </Setter>
+            <Setter Property="BoxShadow" Value="0 0 9 0 #A000FF88" />
         </Style>
 
         <!-- Read-only chips stating what the game turned out to be. Deliberately

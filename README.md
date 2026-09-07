@@ -1,4 +1,4 @@
-# ⚡ DLSS 5 MANAGER
+#  DLSS 5 MANAGER
 
 <p align="center">
   <strong>The First Smart Manager & One-Click Installer for DLSS 5, ReShade, and Streamline Mods.</strong>

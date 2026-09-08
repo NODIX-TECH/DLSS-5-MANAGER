@@ -811,6 +811,19 @@ module GameScanner =
         /// Performance mode: stops the moving background and the card hover
         /// animations. Off by default - the app is meant to look alive.
         PerformanceMode: bool
+        /// In-game overlay, stored as its opposite on purpose: a settings file
+        /// written before the overlay existed has no such field, and a missing
+        /// bool reads back as false - which has to mean "not disabled" so the
+        /// overlay is on for everyone by default. Same reasoning as the
+        /// payload switches in ExtrasStore.
+        OverlayDisabled: bool
+        /// Which look the overlay wears in game. One of the names in
+        /// ModInstaller.overlayThemes - the same list the add-on itself ships.
+        OverlayTheme: string
+        /// Which key opens it, as one of ModInstaller.overlayHotkeys. Empty on
+        /// a settings file written before the overlay had a picker, which
+        /// reads back as the default.
+        OverlayHotkey: string
     }
 
     let private getSettingsFilePath () =
@@ -826,7 +839,10 @@ module GameScanner =
           Language = Localization.systemLanguage ()
           SupportPromptVersion = ""
           AmdMode = false
-          PerformanceMode = false }
+          PerformanceMode = false
+          OverlayDisabled = false
+          OverlayTheme = "Neon Emerald"
+          OverlayHotkey = "Shift+O" }
 
     let loadSettings () : AppSettings =
         try
@@ -839,10 +855,19 @@ module GameScanner =
                 let color = if String.IsNullOrWhiteSpace(s.ColorAtmosphere) then "Neon Emerald" else s.ColorAtmosphere
                 let motif = if String.IsNullOrWhiteSpace(s.GeometricMotif) then "Orbital Spheres" else s.GeometricMotif
                 let lang = if String.IsNullOrWhiteSpace(s.Language) then Localization.systemLanguage () else s.Language
+                // A settings file written before the overlay existed has no
+                // theme, and an empty one would leave the add-on with nothing
+                // to resolve; the default reads the same as a fresh install.
+                let overlayTheme =
+                    if String.IsNullOrWhiteSpace(s.OverlayTheme) then "Neon Emerald" else s.OverlayTheme
+
                 { s with
                     ColorAtmosphere = color
                     GeometricMotif = motif
                     Language = lang
+                    OverlayTheme = overlayTheme
+                    OverlayHotkey =
+                        (if String.IsNullOrWhiteSpace(s.OverlayHotkey) then "Shift+O" else s.OverlayHotkey)
                     SupportPromptVersion = (if isNull s.SupportPromptVersion then "" else s.SupportPromptVersion) }
             else defaultSettings ()
         with _ -> defaultSettings ()

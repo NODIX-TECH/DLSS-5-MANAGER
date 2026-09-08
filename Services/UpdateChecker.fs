@@ -10,7 +10,7 @@ open System.Text.RegularExpressions
 module UpdateChecker =
 
     [<Literal>]
-    let CurrentVersion = "1.1.8"
+    let CurrentVersion = "1.1.9"
 
     [<Literal>]
     let ReleasesApiUrl = "https://api.github.com/repos/NODIX-TECH/DLSS-5-MANAGER/releases"

@@ -141,6 +141,7 @@ module Localization =
         member _.NoEmulatorsTitle = get "no_emulators_title"
         member _.NoEmulatorsDesc = get "no_emulators_desc"
         member _.BtnAddEmulator = get "btn_add_emulator"
+        member _.BtnDetectEmulators = get "btn_detect_emulators"
 
         // ---- Support & about ----------------------------------------------
         member _.SectionSupportTutorials = get "section_support_tutorials"
@@ -160,6 +161,14 @@ module Localization =
         member _.Beta = get "beta"
         member _.AmdTitle = get "amd_title"
         member _.AmdDesc = get "amd_desc"
+
+        // ---- In-game overlay ----------------------------------------------
+        member _.OverlaySection = get "overlay_section"
+        member _.OverlayTitle = get "overlay_title"
+        member _.OverlayDesc = get "overlay_desc"
+        member _.OverlayStyle = get "overlay_style"
+        member _.OverlayHotkey = get "overlay_hotkey"
+        member _.OverlayHotkeyDesc = get "overlay_hotkey_desc"
         member _.Extras = get "extras"
         member _.ExtrasDesc = get "extras_desc"
         member _.BtnAddExtra = get "btn_add_extra"

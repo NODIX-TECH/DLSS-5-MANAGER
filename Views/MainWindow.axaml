@@ -3,8 +3,8 @@
         xmlns:vm="using:DLSS_5_MANAGER.ViewModels"
         xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
-        mc:Ignorable="d" d:DesignWidth="1180" d:DesignHeight="760"
-        Width="1180" Height="760"
+        mc:Ignorable="d" d:DesignWidth="1280" d:DesignHeight="820"
+        Width="1280" Height="820"
         MinWidth="900" MinHeight="600"
         WindowStartupLocation="CenterScreen"
         x:Class="DLSS_5_MANAGER.Views.MainWindow"
@@ -41,6 +41,23 @@
             <Setter Property="Background" Value="#141C18" />
             <Setter Property="BorderBrush" Value="#70FFFFFF" />
             <Setter Property="BoxShadow" Value="0 10 30 0 #65000000, 0 0 20 1 #30FFFFFF" />
+        </Style>
+
+        <!-- The card being dropped onto, repeated from the card's own styles.
+             This copy is the one that decides: the resting rule at the top of
+             this block outranks anything the item template says, so a drag
+             target declared only down there is silently flattened back to
+             198x268. Keep it last here as well. -->
+        <Style Selector="StackPanel.GameCardItem.DragTarget Border.InnerGameCard">
+            <Setter Property="Width" Value="211" />
+            <Setter Property="Height" Value="281" />
+            <Setter Property="BorderBrush" Value="#AAFFFFFF" />
+            <Setter Property="BoxShadow" Value="0 8 26 0 #80000000" />
+        </Style>
+        <Style Selector="StackPanel.GameCardItem.Still.DragTarget Border.InnerGameCard">
+            <Setter Property="Width" Value="198" />
+            <Setter Property="Height" Value="268" />
+            <Setter Property="BoxShadow" Value="none" />
         </Style>
     </Window.Styles>
 
@@ -268,7 +285,9 @@
                                                         HorizontalOffset="-10" VerticalOffset="10">
                                                 <MenuItem Header="Add Game Folder..." Click="OnAddCustomFolderClicked" IsVisible="{Binding !IsEmulatorsTabActive}" />
                                                 <MenuItem Header="Add Game Executable (.exe)..." Click="OnAddSingleGameFileClicked" IsVisible="{Binding !IsEmulatorsTabActive}" />
+                                                <MenuItem Header="Detect Games Automatically" Click="OnRescanClicked" IsVisible="{Binding !IsEmulatorsTabActive}" />
                                                 <MenuItem Header="Add Emulator (.exe)..." Click="OnAddEmulatorClicked" IsVisible="{Binding IsEmulatorsTabActive}" />
+                                                <MenuItem Header="Detect Emulators Automatically" Click="OnDetectEmulatorsClicked" IsVisible="{Binding IsEmulatorsTabActive}" />
                                             </MenuFlyout>
                                         </Button.Flyout>
                                         <PathIcon Data="M 19,13 H 13 V 19 H 11 V 13 H 5 V 11 H 11 V 5 H 13 V 11 H 19 Z"
@@ -360,7 +379,9 @@
                                                         HorizontalOffset="-10" VerticalOffset="10">
                                                 <MenuItem Header="Add Game Folder..." Click="OnAddCustomFolderClicked" IsVisible="{Binding !IsEmulatorsTabActive}" />
                                                 <MenuItem Header="Add Game Executable (.exe)..." Click="OnAddSingleGameFileClicked" IsVisible="{Binding !IsEmulatorsTabActive}" />
+                                                <MenuItem Header="Detect Games Automatically" Click="OnRescanClicked" IsVisible="{Binding !IsEmulatorsTabActive}" />
                                                 <MenuItem Header="Add Emulator (.exe)..." Click="OnAddEmulatorClicked" IsVisible="{Binding IsEmulatorsTabActive}" />
+                                                <MenuItem Header="Detect Emulators Automatically" Click="OnDetectEmulatorsClicked" IsVisible="{Binding IsEmulatorsTabActive}" />
                                             </MenuFlyout>
                                         </Button.Flyout>
                                         <PathIcon Data="M 19,13 H 13 V 19 H 11 V 13 H 5 V 11 H 11 V 5 H 13 V 11 H 19 Z"
@@ -640,6 +661,26 @@
                                                 </Grid>
                                             </Border>
 
+                                            <!-- The neural upstream build of OptiScaler, swapped the
+                                                 same way and just as unswitchable -->
+                                            <Border Background="#0AFFFFFF" BorderBrush="#18FFFFFF" BorderThickness="1" CornerRadius="14" Padding="14,10">
+                                                <Grid ColumnDefinitions="*,Auto" ColumnSpacing="12">
+                                                    <StackPanel Grid.Column="0" Spacing="2" VerticalAlignment="Center">
+                                                        <TextBlock Text="OptiScaler neural-upstream" FontSize="13" FontWeight="SemiBold" Foreground="#FFFFFF" />
+                                                        <TextBlock Text="{Binding OptiScalerNeuralState}" FontSize="11" Foreground="#94A3B8" />
+                                                    </StackPanel>
+                                                    <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="8" VerticalAlignment="Center">
+                                                        <Button Classes="EmptyActionBtn" Click="OnReplaceOptiScalerNeuralClicked" Cursor="Hand" Padding="14,7"
+                                                                ToolTip.Tip="Pick the folder the neural-upstream build was extracted into - it must contain OptiScaler.dll">
+                                                            <TextBlock Text="{Binding Loc.Replace}" FontSize="11" FontWeight="Bold" Foreground="#FFFFFF" />
+                                                        </Button>
+                                                        <Button Classes="EmptyActionBtn" Click="OnRestoreOptiScalerNeuralClicked" Cursor="Hand" Padding="14,7">
+                                                            <TextBlock Text="{Binding Loc.Restore}" FontSize="11" FontWeight="Bold" Foreground="#CBD5E1" />
+                                                        </Button>
+                                                    </StackPanel>
+                                                </Grid>
+                                            </Border>
+
                                             <!-- AMD payload: swappable, but never switchable - the
                                                  route has nothing to install without it. -->
                                             <Border Background="#0AFFFFFF" BorderBrush="#18FFFFFF" BorderThickness="1" CornerRadius="14" Padding="14,10">
@@ -738,6 +779,9 @@
                                                                                         Tag="optiscaler-dx12" Padding="11,5" Content="OPTI" Cursor="Hand" FontSize="10.5" />
                                                                                 <Button Classes="SegmentedTab" Classes.Active="{Binding IsOptiVulkanMode}" Click="OnToggleExtraModeClicked"
                                                                                         Tag="optiscaler-vulkan" Padding="11,5" Content="VK" Cursor="Hand" FontSize="10.5" />
+                                                                                <Button Classes="SegmentedTab" Classes.Active="{Binding IsOptiNeuralMode}" Click="OnToggleExtraModeClicked"
+                                                                                        Tag="optiscaler-neural" Padding="11,5" Content="NU" Cursor="Hand" FontSize="10.5"
+                                                                                        ToolTip.Tip="OptiScaler neural-upstream" />
                                                                             </StackPanel>
                                                                         </Border>
 
@@ -876,6 +920,46 @@
                                     </StackPanel>
                                 </Border>
 
+                                <!-- Card 3e: In-game overlay -->
+                                <Border Classes="SettingsCard Stagger5" Classes.Shown="{Binding IsSettingsOpen}"
+                                        IsVisible="{Binding ShowOverlayCard}"
+                                        Background="#08FFFFFF" BorderBrush="#18FFFFFF" BorderThickness="1" CornerRadius="18" Padding="20">
+                                    <StackPanel Spacing="14">
+                                        <TextBlock Text="{Binding Loc.OverlaySection}" FontSize="11.5" FontWeight="Bold" Foreground="#94A3B8"
+                                                   LetterSpacing="0.5" />
+
+                                        <Grid ColumnDefinitions="*,Auto" ColumnSpacing="16">
+                                            <TextBlock Grid.Column="0" Text="{Binding Loc.OverlayTitle}" FontSize="13.5"
+                                                       FontWeight="SemiBold" Foreground="#FFFFFF" VerticalAlignment="Center" />
+
+                                            <ToggleSwitch Grid.Column="1" IsChecked="{Binding IsOverlayEnabled, Mode=TwoWay}"
+                                                          OnContent="" OffContent="" VerticalAlignment="Center"
+                                                          ToolTip.Tip="Off means no install deploys the overlay" />
+                                        </Grid>
+
+                                        <Rectangle Height="1" Fill="#12FFFFFF" HorizontalAlignment="Stretch"
+                                                   IsVisible="{Binding IsOverlayEnabled}" />
+
+                                        <Grid ColumnDefinitions="*,Auto" ColumnSpacing="16" IsVisible="{Binding IsOverlayEnabled}">
+                                            <TextBlock Grid.Column="0" Text="{Binding Loc.OverlayStyle}" FontSize="12.5" FontWeight="SemiBold"
+                                                       Foreground="#CBD5E1" VerticalAlignment="Center" />
+                                            <ComboBox Grid.Column="1" Classes="GlassComboBox"
+                                                      ItemsSource="{Binding OverlayThemes}"
+                                                      SelectedItem="{Binding SelectedOverlayTheme, Mode=TwoWay}"
+                                                      Width="200" Height="36" VerticalAlignment="Center" />
+                                        </Grid>
+
+                                        <Grid ColumnDefinitions="*,Auto" ColumnSpacing="16" IsVisible="{Binding IsOverlayEnabled}">
+                                            <TextBlock Grid.Column="0" Text="{Binding Loc.OverlayHotkey}" FontSize="12.5"
+                                                       FontWeight="SemiBold" Foreground="#CBD5E1" VerticalAlignment="Center" />
+                                            <ComboBox Grid.Column="1" Classes="GlassComboBox"
+                                                      ItemsSource="{Binding OverlayHotkeys}"
+                                                      SelectedItem="{Binding SelectedOverlayHotkey, Mode=TwoWay}"
+                                                      Width="200" Height="36" VerticalAlignment="Center" />
+                                        </Grid>
+                                    </StackPanel>
+                                </Border>
+
                                 <!-- Card 4: About & Updates -->
                                 <Border Classes="SettingsCard Stagger6" Classes.Shown="{Binding IsSettingsOpen}"
                                         IsVisible="{Binding ShowAboutCard}"
@@ -999,7 +1083,6 @@
 
                                                         <!-- Drag Target State: Magnetic Lift & Glass Halo -->
                                                         <Style Selector="StackPanel.GameCardItem.DragTarget">
-                                                            <Setter Property="RenderTransform" Value="scale(1.04)" />
                                                             <Setter Property="ZIndex" Value="500" />
                                                         </Style>
                                                         <Style Selector="StackPanel.GameCardItem.DragTarget Border.GameCardBezel">
@@ -1057,6 +1140,32 @@
                                                         </Style>
                                                         <Style Selector="StackPanel.GameCardItem.Still:pointerover Border.GameCardBezel">
                                                             <Setter Property="BoxShadow" Value="0 6 24 0 #45000000" />
+                                                        </Style>
+
+                                                        <!-- Dragging captures the pointer on the card that started
+                                                             it, so no other card ever sees :pointerover and the
+                                                             artwork expansion above never fires while reordering.
+                                                             The drop target grows here instead, by the same amounts,
+                                                             so a card being dropped onto looks like a hovered one.
+                                                             These MUST stay last in the collection: the resting
+                                                             Border.InnerGameCard rule above would otherwise win,
+                                                             which is exactly why the first attempt did nothing.
+                                                             It grows further than hover does — the floating ghost
+                                                             sits centred on the cursor, over the card being aimed
+                                                             at, so a hover-sized 205 would be hidden underneath
+                                                             it. 211 is the widest the 216 bezel can hold. -->
+                                                        <Style Selector="StackPanel.GameCardItem.DragTarget Border.InnerGameCard">
+                                                            <Setter Property="Width" Value="211" />
+                                                            <Setter Property="Height" Value="281" />
+                                                            <Setter Property="BorderBrush" Value="#AAFFFFFF" />
+                                                            <Setter Property="BoxShadow" Value="0 8 26 0 #80000000" />
+                                                        </Style>
+
+                                                        <!-- Performance mode leaves the size alone here too. -->
+                                                        <Style Selector="StackPanel.GameCardItem.Still.DragTarget Border.InnerGameCard">
+                                                            <Setter Property="Width" Value="198" />
+                                                            <Setter Property="Height" Value="268" />
+                                                            <Setter Property="BoxShadow" Value="none" />
                                                         </Style>
                                                     </StackPanel.Styles>
 
@@ -1322,9 +1431,16 @@
                                                        HorizontalAlignment="Center" />
                                             <TextBlock Text="{Binding Loc.NoEmulatorsDesc}"
                                                        FontSize="12" Foreground="#7C8595" TextWrapping="Wrap" TextAlignment="Center" LineHeight="18" />
-                                            <Button Classes="EmptyActionBtn" Click="OnAddEmulatorClicked" Cursor="Hand" HorizontalAlignment="Center">
-                                                <TextBlock Text="{Binding Loc.BtnAddEmulator}" FontSize="12.5" FontWeight="SemiBold" Foreground="#F1F5F9" />
-                                            </Button>
+                                            <StackPanel Orientation="Horizontal" Spacing="10" HorizontalAlignment="Center">
+                                                <Button Classes="EmptyActionBtn" Click="OnDetectEmulatorsClicked" Cursor="Hand"
+                                                        IsEnabled="{Binding !IsScanning}"
+                                                        ToolTip.Tip="Looks for the emulators the app knows, in the folders they are usually installed in">
+                                                    <TextBlock Text="{Binding Loc.BtnDetectEmulators}" FontSize="12.5" FontWeight="SemiBold" Foreground="#F1F5F9" />
+                                                </Button>
+                                                <Button Classes="EmptyActionBtn" Click="OnAddEmulatorClicked" Cursor="Hand">
+                                                    <TextBlock Text="{Binding Loc.BtnAddEmulator}" FontSize="12.5" FontWeight="SemiBold" Foreground="#F1F5F9" />
+                                                </Button>
+                                            </StackPanel>
                                         </StackPanel>
                                     </Border>
 
@@ -1492,34 +1608,45 @@
                                     </UniformGrid>
                                 </Border>
 
-                                <!-- Graphics API: OptiScaler only. Same files either way -
-                                     it decides which library OptiScaler hooks. -->
-                                <Grid ColumnDefinitions="Auto,*" ColumnSpacing="12" IsVisible="{Binding IsOptiApiChoiceVisible}">
+                                <!-- Graphics API: OptiScaler only. DirectX 12 and Vulkan deploy
+                                     the same files and only differ in which library OptiScaler
+                                     hooks; neural upstream is a different build of it. -->
+                                <Grid Classes="RouteReveal" Classes.Shown="{Binding IsOptiApiChoiceVisible}" ColumnDefinitions="Auto,*" ColumnSpacing="12" IsVisible="{Binding IsOptiApiChoiceVisible}">
                                     <TextBlock Grid.Column="0" Text="API" FontSize="9.5" FontWeight="Bold" Foreground="#7C8595"
                                                LetterSpacing="0.8" VerticalAlignment="Center" />
 
                                     <Border Grid.Column="1" CornerRadius="13" Padding="3" Background="#0C1014"
                                             BorderBrush="#20FFFFFF" BorderThickness="1" HorizontalAlignment="Stretch">
-                                        <UniformGrid Columns="2">
+                                        <UniformGrid Columns="3">
                                             <Panel>
                                                 <Button Classes="SegmentedTab" Classes.Active="{Binding IsOptiDx12}" Click="OnSetOptiDx12"
-                                                        IsEnabled="{Binding IsManageReady}" Padding="8,6" Content="DirectX 12" Cursor="Hand"
+                                                        IsEnabled="{Binding IsManageReady}" Padding="6,6" FontSize="11.5"
+                                                        Content="DirectX 12" Cursor="Hand"
                                                         HorizontalAlignment="Stretch" HorizontalContentAlignment="Center" />
                                                 <Border Classes="ActiveRouteDot" IsVisible="{Binding IsOptiDx12Installed}" />
                                             </Panel>
                                             <Panel>
                                                 <Button Classes="SegmentedTab" Classes.Active="{Binding IsOptiVulkan}" Click="OnSetOptiVulkan"
-                                                        IsEnabled="{Binding IsManageReady}" Padding="8,6" Content="Vulkan" Cursor="Hand"
+                                                        IsEnabled="{Binding IsManageReady}" Padding="6,6" FontSize="11.5"
+                                                        Content="Vulkan" Cursor="Hand"
                                                         HorizontalAlignment="Stretch" HorizontalContentAlignment="Center"
                                                         ToolTip.Tip="Hooks winmm.dll first - a Vulkan title never loads dxgi.dll" />
                                                 <Border Classes="ActiveRouteDot" IsVisible="{Binding IsOptiVulkanInstalled}" />
+                                            </Panel>
+                                            <Panel>
+                                                <Button Classes="SegmentedTab" Classes.Active="{Binding IsOptiNeural}" Click="OnSetOptiNeural"
+                                                        IsEnabled="{Binding IsManageReady}" Padding="6,6" FontSize="11.5"
+                                                        Content="Upstream" Cursor="Hand"
+                                                        HorizontalAlignment="Stretch" HorizontalContentAlignment="Center"
+                                                        ToolTip.Tip="neural-upstream - a different OptiScaler build, hooked exactly like DirectX 12" />
+                                                <Border Classes="ActiveRouteDot" IsVisible="{Binding IsOptiNeuralInstalled}" />
                                             </Panel>
                                         </UniformGrid>
                                     </Border>
                                 </Grid>
 
                                 <!-- Build: only DX11 and DX9 come in two -->
-                                <Grid ColumnDefinitions="Auto,*" ColumnSpacing="12" IsVisible="{Binding IsArchChoiceVisible}">
+                                <Grid Classes="RouteReveal" Classes.Shown="{Binding IsArchChoiceVisible}" ColumnDefinitions="Auto,*" ColumnSpacing="12" IsVisible="{Binding IsArchChoiceVisible}">
                                     <TextBlock Grid.Column="0" Text="BUILD" FontSize="9.5" FontWeight="Bold" Foreground="#7C8595"
                                                LetterSpacing="0.8" VerticalAlignment="Center" />
 
@@ -1560,6 +1687,71 @@
                                            Text="AMD MODE is on - this game installs the AMD RDNA 4 payload. It will not work on every title. Turn it off in Settings to go back to the normal routes."
                                            FontSize="11" Foreground="#D6C08A" TextWrapping="Wrap" LineHeight="16"
                                            VerticalAlignment="Center" />
+                            </Grid>
+                        </Border>
+
+                        <!-- Neural upstream: one extra add-on that travels with the DX12,
+                             DX11, DX9 and AMD installs. It sits outside the route picker
+                             because AMD mode hides that card entirely. -->
+                        <Border Classes="RouteReveal" Classes.Shown="{Binding IsNeuralAddonVisible}" IsVisible="{Binding IsNeuralAddonVisible}"
+                                Background="#0CFFFFFF" BorderBrush="#1AFFFFFF" BorderThickness="1"
+                                CornerRadius="16" Padding="16,13">
+                            <StackPanel Spacing="10">
+                                <Grid ColumnDefinitions="Auto,*" ColumnSpacing="12">
+                                    <StackPanel Grid.Column="0" Orientation="Horizontal" Spacing="7" VerticalAlignment="Center">
+                                        <TextBlock Text="NEURAL UPSTREAM" FontSize="9.5" FontWeight="Bold"
+                                                   Foreground="#7C8595" LetterSpacing="0.8" VerticalAlignment="Center" />
+                                        <Border Background="#26F59E0B" BorderBrush="#55F59E0B" BorderThickness="1"
+                                                CornerRadius="6" Padding="6,1" VerticalAlignment="Center">
+                                            <TextBlock Text="{Binding Loc.Beta}" FontSize="8.5" FontWeight="Bold"
+                                                       Foreground="#FCD34D" LetterSpacing="0.6" />
+                                        </Border>
+                                    </StackPanel>
+
+                                    <Border Grid.Column="1" CornerRadius="13" Padding="3" Background="#0C1014"
+                                            BorderBrush="#20FFFFFF" BorderThickness="1" HorizontalAlignment="Stretch">
+                                        <UniformGrid Columns="2">
+                                            <Panel>
+                                                <Button Classes="SegmentedTab" Classes.Active="{Binding IsNeuralAddonOff}" Click="OnSetNeuralAddonOff"
+                                                        IsEnabled="{Binding IsManageReady}" Padding="8,6" Content="OFF" Cursor="Hand"
+                                                        HorizontalAlignment="Stretch" HorizontalContentAlignment="Center" />
+                                            </Panel>
+                                            <Panel>
+                                                <Button Classes="SegmentedTab" Classes.Active="{Binding IsNeuralAddonOn}" Click="OnSetNeuralAddonOn"
+                                                        IsEnabled="{Binding IsManageReady}" Padding="8,6" Content="ON" Cursor="Hand"
+                                                        HorizontalAlignment="Stretch" HorizontalContentAlignment="Center"
+                                                        ToolTip.Tip="Sends nvngx.dll.addon64 along with this install" />
+                                                <Border Classes="ActiveRouteDot" IsVisible="{Binding IsNeuralAddonInstalled}" />
+                                            </Panel>
+                                        </UniformGrid>
+                                    </Border>
+                                </Grid>
+
+                                <TextBlock Text="Adds nvngx.dll.addon64 next to the game on top of the route above. Leave it off unless you know the game wants it."
+                                           FontSize="11" Foreground="#94A3B8" TextWrapping="Wrap" LineHeight="16" />
+                            </StackPanel>
+                        </Border>
+
+                        <!-- The overlay, switchable per install. Hidden on the routes that
+                             cannot host it - see ModInstaller.overlaySupported. -->
+                        <Border Classes="RouteReveal" Classes.Shown="{Binding IsOverlayRouteSupported}" IsVisible="{Binding IsOverlayRouteSupported}"
+                                Background="#0CFFFFFF" BorderBrush="#1AFFFFFF" BorderThickness="1"
+                                CornerRadius="16" Padding="16,13">
+                            <Grid ColumnDefinitions="Auto,*" ColumnSpacing="12">
+                                <TextBlock Grid.Column="0" Text="{Binding Loc.OverlaySection}" FontSize="9.5" FontWeight="Bold"
+                                           Foreground="#7C8595" LetterSpacing="0.8" VerticalAlignment="Center" />
+
+                                <Border Grid.Column="1" CornerRadius="13" Padding="3" Background="#0C1014"
+                                        BorderBrush="#20FFFFFF" BorderThickness="1" HorizontalAlignment="Stretch">
+                                    <UniformGrid Columns="2">
+                                        <Button Classes="SegmentedTab" Classes.Active="{Binding !IsOverlayEnabled}" Click="OnSetOverlayOff"
+                                                IsEnabled="{Binding IsManageReady}" Padding="8,6" Content="OFF" Cursor="Hand"
+                                                HorizontalAlignment="Stretch" HorizontalContentAlignment="Center" />
+                                        <Button Classes="SegmentedTab" Classes.Active="{Binding IsOverlayEnabled}" Click="OnSetOverlayOn"
+                                                IsEnabled="{Binding IsManageReady}" Padding="8,6" Content="ON" Cursor="Hand"
+                                                HorizontalAlignment="Stretch" HorizontalContentAlignment="Center" />
+                                    </UniformGrid>
+                                </Border>
                             </Grid>
                         </Border>
 

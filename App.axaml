@@ -1160,6 +1160,29 @@
         </Style>
 
         <!-- ============================================================== -->
+        <!-- Route reveal                                                    -->
+        <!-- Switching install route shows and hides whole rows - the API    -->
+        <!-- picker, the build picker, the two add-on switches. Appearing    -->
+        <!-- instantly reads as a jump, so they slide in the way the app's   -->
+        <!-- own pages do, only shorter: this is a row inside a sheet, not a -->
+        <!-- page. Bind Classes.Shown and IsVisible to the same property.    -->
+        <!-- ============================================================== -->
+        <Style Selector=":is(Control).RouteReveal.Shown">
+            <Style.Animations>
+                <Animation Duration="0:0:0.2" Easing="CubicEaseOut" FillMode="Both">
+                    <KeyFrame Cue="0%">
+                        <Setter Property="Opacity" Value="0" />
+                        <Setter Property="TranslateTransform.Y" Value="-6" />
+                    </KeyFrame>
+                    <KeyFrame Cue="100%">
+                        <Setter Property="Opacity" Value="1" />
+                        <Setter Property="TranslateTransform.Y" Value="0" />
+                    </KeyFrame>
+                </Animation>
+            </Style.Animations>
+        </Style>
+
+        <!-- ============================================================== -->
         <!-- Glass link buttons (Ko-fi / YouTube)                            -->
         <!-- ============================================================== -->
         <Style Selector="Button.GlassLinkBtn">

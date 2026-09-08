@@ -310,6 +310,13 @@ type MainWindow() as this =
         }
         |> Async.StartImmediate
 
+    member this.OnDetectEmulatorsClicked(sender: obj, e: RoutedEventArgs) =
+        match this.DataContext with
+        | :? MainViewModel as vm ->
+            vm.ShowEmulators()
+            vm.DetectEmulators()
+        | _ -> ()
+
     member this.OnEmulatorsWheelChanged(sender: obj, e: PointerWheelEventArgs) =
         this.SmoothScroll(this.FindControl<ScrollViewer>("EmulatorsScrollViewer"), e)
 
@@ -493,6 +500,26 @@ type MainWindow() as this =
             |> Async.StartImmediate
         | _ -> ()
 
+    member this.OnReplaceOptiScalerNeuralClicked(sender: obj, e: RoutedEventArgs) =
+        match this.DataContext with
+        | :? MainViewModel as vm ->
+            let options = FolderPickerOpenOptions()
+            options.Title <- "Select the OptiScaler neural-upstream folder (must contain OptiScaler.dll)"
+            options.AllowMultiple <- false
+
+            async {
+                let! folders = this.StorageProvider.OpenFolderPickerAsync(options) |> Async.AwaitTask
+                if folders <> null && folders.Count > 0 then
+                    vm.ReplaceOptiScalerNeural(folders.[0].Path.LocalPath)
+            }
+            |> Async.StartImmediate
+        | _ -> ()
+
+    member this.OnRestoreOptiScalerNeuralClicked(sender: obj, e: RoutedEventArgs) =
+        match this.DataContext with
+        | :? MainViewModel as vm -> vm.RestoreOptiScalerNeural()
+        | _ -> ()
+
     /// Several at once, so a whole updated payload can go in one pick; only
     /// the names that already exist in the folder are used.
     member this.OnReplaceAmdPayloadClicked(sender: obj, e: RoutedEventArgs) =
@@ -602,6 +629,31 @@ type MainWindow() as this =
     member this.OnSetOptiVulkan(sender: obj, e: RoutedEventArgs) =
         match this.DataContext with
         | :? MainViewModel as vm -> vm.SetOptiApi(ModInstaller.OptiVulkan)
+        | _ -> ()
+
+    member this.OnSetOptiNeural(sender: obj, e: RoutedEventArgs) =
+        match this.DataContext with
+        | :? MainViewModel as vm -> vm.SetOptiApi(ModInstaller.OptiNeural)
+        | _ -> ()
+
+    member this.OnSetNeuralAddonOn(sender: obj, e: RoutedEventArgs) =
+        match this.DataContext with
+        | :? MainViewModel as vm -> vm.SetNeuralAddon(true)
+        | _ -> ()
+
+    member this.OnSetNeuralAddonOff(sender: obj, e: RoutedEventArgs) =
+        match this.DataContext with
+        | :? MainViewModel as vm -> vm.SetNeuralAddon(false)
+        | _ -> ()
+
+    member this.OnSetOverlayOn(sender: obj, e: RoutedEventArgs) =
+        match this.DataContext with
+        | :? MainViewModel as vm -> vm.IsOverlayEnabled <- true
+        | _ -> ()
+
+    member this.OnSetOverlayOff(sender: obj, e: RoutedEventArgs) =
+        match this.DataContext with
+        | :? MainViewModel as vm -> vm.IsOverlayEnabled <- false
         | _ -> ()
 
     member this.OnSetBit64(sender: obj, e: RoutedEventArgs) =

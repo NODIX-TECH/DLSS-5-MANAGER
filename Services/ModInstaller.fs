@@ -45,8 +45,13 @@ module ModInstaller =
           /// "64" / "32", empty on manifests written before 1.1.0 - those were
           /// all 64-bit, which is what an empty value is read as.
           Arch: string
-          /// OptiScaler only: "dx12" / "vulkan". Empty on older manifests.
+          /// OptiScaler only: "dx12" / "vulkan" / "neural". Empty on older
+          /// manifests.
           Api: string
+          /// "1" when the neural upstream add-on travelled with a DX12 / DX11 /
+          /// DX9 / AMD install. Empty everywhere else, and on every manifest
+          /// written before the option existed.
+          Neural: string
           Files: InstalledFile[] }
 
     /// The mutually exclusive install routes offered in the Manage sheet.
@@ -73,17 +78,21 @@ module ModInstaller =
         | Bit64
         | Bit32
 
-    /// Which API the game renders with, on the OptiScaler route. The files
-    /// deployed are identical either way - it only decides which proxy library
-    /// OptiScaler takes over, because a Vulkan title never loads dxgi.dll.
+    /// Which API the game renders with, on the OptiScaler route. DirectX 12
+    /// and Vulkan deploy identical files - the choice only decides which proxy
+    /// library OptiScaler takes over, because a Vulkan title never loads
+    /// dxgi.dll. Neural upstream is a different build of OptiScaler entirely,
+    /// hooked exactly like the DirectX 12 one.
     type OptiScalerApi =
         | OptiDx12
         | OptiVulkan
+        | OptiNeural
 
     let optiApiKey (api: OptiScalerApi) =
         match api with
         | OptiDx12 -> "dx12"
         | OptiVulkan -> "vulkan"
+        | OptiNeural -> "neural"
 
     let modeKey (mode: InstallMode) =
         match mode with
@@ -282,6 +291,102 @@ module ModInstaller =
     /// can load, so it replaces all three 64-bit files next to the executable.
     let feedAddon32Name = "dlss5-feed.addon32"
 
+    /// Neural upstream: one add-on that travels with a DX12 / DX11 / DX9 or
+    /// AMD install when the user asks for it. It is 64-bit, so a 32-bit game
+    /// gets it inside host64 where the rest of the 64-bit modules already run.
+    let neuralAddonName = "nvngx.dll.addon64"
+
+    // =====================================================================
+    // IN-GAME OVERLAY
+    // =====================================================================
+    /// The overlay is a ReShade add-on, so it needs a ReShade in the process
+    /// to draw through. Every ReShade route already has one; the OptiScaler
+    /// route does not, and gets one of its own - see `deployOverlay`.
+    let overlayAddonName = "dlss5-overlay.addon64"
+
+    /// The overlay reads its own settings from here, beside the game. The app
+    /// writes it at install time; the overlay writes it back when the user
+    /// changes something from inside the game.
+    let overlayConfigName = "dlss5-overlay.ini"
+
+    /// The bindings the app offers for opening the overlay, written the way
+    /// people read them. The overlay's own Settings tab can pick any key it
+    /// likes; this is the shortlist that covers what a game is unlikely to
+    /// already be using.
+    let overlayHotkeys =
+        [| "Shift+O"; "Ctrl+O"; "Alt+O"; "Ctrl+Shift+O"
+           "Shift+P"; "Shift+M"; "F8"; "Shift+F8"; "F9"; "F10"; "F11"
+           "Insert"; "End"; "Page Down" |]
+
+    /// Splits one of the above into what the overlay's ini stores: a virtual
+    /// key code and the three modifier switches. An unknown binding falls back
+    /// to the default rather than writing something the overlay cannot match.
+    let parseOverlayHotkey (binding: string) : int * bool * bool * bool =
+        let text = if String.IsNullOrWhiteSpace(binding) then overlayHotkeys.[0] else binding
+        let parts = text.Split('+') |> Array.map (fun p -> p.Trim())
+
+        let has (name: string) =
+            parts |> Array.exists (fun p -> String.Equals(p, name, StringComparison.OrdinalIgnoreCase))
+
+        let key =
+            match parts |> Array.tryLast with
+            | None -> 0
+            | Some last ->
+                let upper = last.ToUpperInvariant()
+
+                // Virtual-key codes: a letter is its own ASCII value, and the
+                // named keys are the handful the shortlist uses.
+                if upper.Length = 1 && upper.[0] >= 'A' && upper.[0] <= 'Z' then int upper.[0]
+                elif upper.StartsWith("F") && upper.Length <= 3 then
+                    match Int32.TryParse(upper.Substring(1)) with
+                    | true, n when n >= 1 && n <= 12 -> 0x70 + (n - 1)
+                    | _ -> 0
+                else
+                    match upper with
+                    | "INSERT" -> 0x2D
+                    | "DELETE" -> 0x2E
+                    | "END" -> 0x23
+                    | "PAGE UP" -> 0x21
+                    | "PAGE DOWN" -> 0x22
+                    | _ -> 0
+
+        if key = 0 then
+            (int 'O', false, true, false)
+        else
+            (key, has "Ctrl", has "Shift", has "Alt")
+
+    /// The looks the overlay ships. Identical to the list inside the add-on,
+    /// so whatever is written here always resolves in game.
+    let overlayThemes =
+        [| "Neon Emerald"; "Cyber Cyan"; "Electric Violet"
+           "Supernova Amber"; "Eclipse Crimson"; "Graphite Minimal" |]
+
+    /// Which routes the overlay is offered for.
+    ///
+    /// It is a ReShade add-on, and it only goes where a ReShade route already
+    /// put one. The other two routes are deliberately left alone: OptiScaler
+    /// hooks the game by itself and AMD mode ships a self-contained payload, so
+    /// either would need a ReShade installed purely to host the overlay - and
+    /// that changes what those routes are. They stay as they were.
+    let overlaySupported (mode: InstallMode) (_api: OptiScalerApi) =
+        match mode with
+        | Dx12Auto
+        | Dx11
+        | Dx9
+        | Emulator -> true
+        | OptiScalerMode
+        | AmdMode -> false
+
+    /// What the user asked for in Settings, carried into one install.
+    type OverlayOptions =
+        { Enabled: bool
+          Theme: string
+          /// One of `overlayHotkeys`. The overlay can change it from inside the
+          /// game too, and that choice survives the next install.
+          Hotkey: string }
+
+    let overlayOff = { Enabled = false; Theme = ""; Hotkey = "" }
+
     /// Everything 64-bit a 32-bit game still needs lives in this folder and is
     /// driven out-of-process by dlss5-feed-host64.exe.
     let bit32PayloadDirName = "if 32 bit"
@@ -314,7 +419,8 @@ module ModInstaller =
     /// this list. Anything already handled by the manifest is skipped.
     let exclusiveArtifacts =
         [| "dlssnr_on_amd.ini"; "dlssnr_on_amd.log"; "dlss5-feed.addon64"; "dlss5-feed.addon32"; "renodx-dlss5.addon64"
-           "nvngx_dlssnr.dll"; "nvngx.dll_dlssnr.dll"
+           "nvngx_dlssnr.dll"; "nvngx.dll_dlssnr.dll"; "nvngx.dll.addon64"
+           "dlss5-overlay.addon64"; "dlss5-overlay.ini"; "dlss5-overlay.ini.bak"; "dlss5-overlay.log"
            "OptiScaler.ini"; "OptiScaler.log"; "Remove_OptiScaler.bat"; "setup_windows.bat"
            "dgVoodoo.conf"; "dgVoodooCpl.exe"
            "deep-fried-chicken-nvngx.dll"; "deep-fried-chicken.addon64"; "deep-fried-chicken.cfg" |]
@@ -330,6 +436,16 @@ module ModInstaller =
     let dlss5DirName = "dlss 5"
 
     let optiScalerDirName = "if OptiScaler"
+
+    /// The neural upstream build of OptiScaler. Same shape as the folder above
+    /// and hooked the same way, so the route only has to pick between the two.
+    let optiScalerNeuralDirName = "if OptiScaler neural-upstream"
+
+    /// Which OptiScaler payload an API choice reads from.
+    let optiScalerPayloadDirName (api: OptiScalerApi) =
+        match api with
+        | OptiNeural -> optiScalerNeuralDirName
+        | _ -> optiScalerDirName
 
     /// Exactly the menu OptiScaler's setup offers, in its own order. The first
     /// name the game does not already use is the one that cannot clash.
@@ -372,6 +488,9 @@ module ModInstaller =
     /// Stands in for the whole "if OptiScaler" folder in the same way.
     let optiScalerKey = "OptiScaler"
 
+    /// And for the neural upstream folder beside it.
+    let optiScalerNeuralKey = "OptiScaler neural-upstream"
+
     /// The filenames a route already puts next to the executable.
     ///
     /// An extra carrying one of these names would fight the payload for the
@@ -406,11 +525,18 @@ module ModInstaller =
                     [ "dxgi.dll"; "d3d9.dll"; "d3d10.dll"; "d3d11.dll"; "d3d12.dll"; "opengl32.dll"
                       "vulkan-1.dll"; "ReShade.ini"; "ReShadePreset.ini"; "ReShade.log" ]
 
-            let addons = Set.ofList [ renodxAddonName; feedAddonName; feedAddon32Name ]
+            // The neural upstream add-on is optional per install, but a route
+            // that can carry it still owns the name.
+            let addons =
+                Set.ofList [ renodxAddonName; feedAddonName; feedAddon32Name; neuralAddonName ]
 
             match routeKey with
-            | "optiscaler" -> Set.unionMany [ model; runtimes; namesIn [ optiScalerDirName ] ]
-            | "amd" -> Set.unionMany [ model; namesIn [ amdPayloadDirName ]; Set.ofArray amdSlots ]
+            | "optiscaler" ->
+                Set.unionMany
+                    [ model; runtimes; namesIn [ optiScalerDirName ]; namesIn [ optiScalerNeuralDirName ] ]
+            | "amd" ->
+                Set.unionMany
+                    [ model; namesIn [ amdPayloadDirName ]; Set.ofArray amdSlots; Set.ofList [ neuralAddonName ] ]
             | "emulator" ->
                 Set.unionMany [ model; runtimes; effects; reshadeSide; addons; namesIn [ emulatorPayloadDirName ] ]
             | "dx9" ->
@@ -431,7 +557,7 @@ module ModInstaller =
     module Payload =
 
         let replaceableFiles =
-            [| feedAddonName; feedAddon32Name; renodxAddonName; dlssnrFileName |]
+            [| feedAddonName; feedAddon32Name; renodxAddonName; neuralAddonName; dlssnrFileName |]
 
         let private factoryDir () =
             let p = Path.Combine(appDataRoot (), "FactoryModFiles")
@@ -574,13 +700,17 @@ module ModInstaller =
         // -----------------------------------------------------------------
         /// OptiScaler ships as a folder, so updating it means swapping the
         /// whole payload. A folder without OptiScaler.dll is not OptiScaler.
-        let describeOptiScaler () =
+        ///
+        /// Two of these ship: the ordinary build and the neural upstream one.
+        /// They are the same thing in a different folder, so everything below
+        /// takes the folder and the key it is switched under.
+        let private describeOptiFolder (dirName: string) (key: string) =
             let root = modFilesRoot ()
 
             if String.IsNullOrWhiteSpace(root) then
                 "Missing"
             else
-                let dll = Path.Combine(root, optiScalerDirName, "OptiScaler.dll")
+                let dll = Path.Combine(root, dirName, "OptiScaler.dll")
 
                 if not (File.Exists(dll)) then
                     "Missing"
@@ -593,13 +723,21 @@ module ModInstaller =
                         else
                             sprintf "v%s" (verText ver)
 
-                    if isOverridden optiScalerKey then "Custom · " + tag else "Bundled · " + tag
+                    if isOverridden key then "Custom · " + tag else "Bundled · " + tag
+
+        let describeOptiScaler () = describeOptiFolder optiScalerDirName optiScalerKey
+
+        let describeOptiScalerNeural () =
+            describeOptiFolder optiScalerNeuralDirName optiScalerNeuralKey
 
         let private optiFactoryDir () =
             let p = Path.Combine(factoryDir (), "OptiScalerPayload")
             p
 
-        let replaceOptiScaler (sourceDir: string) : bool * string =
+        let private optiNeuralFactoryDir () =
+            Path.Combine(factoryDir (), "OptiScalerNeuralPayload")
+
+        let private replaceOptiFolder (dirName: string) (key: string) (factory: string) (label: string) (sourceDir: string) : bool * string =
             try
                 let root = modFilesRoot ()
 
@@ -610,8 +748,7 @@ module ModInstaller =
                 elif not (File.Exists(Path.Combine(sourceDir, "OptiScaler.dll"))) then
                     (false, "That folder does not contain OptiScaler.dll - pick the folder OptiScaler was extracted into.")
                 else
-                    let live = Path.Combine(root, optiScalerDirName)
-                    let factory = optiFactoryDir ()
+                    let live = Path.Combine(root, dirName)
 
                     // Set the shipped payload aside once.
                     if Directory.Exists(live) && not (Directory.Exists(factory)) then
@@ -623,7 +760,7 @@ module ModInstaller =
                             Directory.CreateDirectory(Path.GetDirectoryName(dst)) |> ignore
                             File.Copy(src, dst, true)
 
-                        File.WriteAllText(factoryPath optiScalerKey, "folder")
+                        File.WriteAllText(factoryPath key, "folder")
 
                     if Directory.Exists(live) then Directory.Delete(live, true)
                     Directory.CreateDirectory(live) |> ignore
@@ -637,9 +774,20 @@ module ModInstaller =
                         File.Copy(src, dst, true)
                         count <- count + 1
 
-                    (true, sprintf "OptiScaler updated (%d file(s))." count)
+                    (true, sprintf "%s updated (%d file(s))." label count)
             with ex ->
-                (false, "Could not update OptiScaler: " + ex.Message)
+                (false, "Could not update " + label + ": " + ex.Message)
+
+        let replaceOptiScaler (sourceDir: string) : bool * string =
+            replaceOptiFolder optiScalerDirName optiScalerKey (optiFactoryDir ()) "OptiScaler" sourceDir
+
+        let replaceOptiScalerNeural (sourceDir: string) : bool * string =
+            replaceOptiFolder
+                optiScalerNeuralDirName
+                optiScalerNeuralKey
+                (optiNeuralFactoryDir ())
+                "OptiScaler neural-upstream"
+                sourceDir
 
         // -----------------------------------------------------------------
         // AMD PAYLOAD
@@ -741,15 +889,14 @@ module ModInstaller =
             with ex ->
                 (false, "Could not restore the AMD payload: " + ex.Message)
 
-        let restoreOptiScaler () : bool * string =
+        let private restoreOptiFolder (dirName: string) (key: string) (factory: string) (label: string) : bool * string =
             try
                 let root = modFilesRoot ()
-                let factory = optiFactoryDir ()
 
                 if not (Directory.Exists(factory)) then
-                    (false, "OptiScaler is already the bundled version.")
+                    (false, label + " is already the bundled version.")
                 else
-                    let live = Path.Combine(root, optiScalerDirName)
+                    let live = Path.Combine(root, dirName)
                     if Directory.Exists(live) then Directory.Delete(live, true)
                     Directory.CreateDirectory(live) |> ignore
 
@@ -760,10 +907,20 @@ module ModInstaller =
                         File.Copy(src, dst, true)
 
                     Directory.Delete(factory, true)
-                    try File.Delete(factoryPath optiScalerKey) with _ -> ()
-                    (true, "OptiScaler restored to the bundled version.")
+                    try File.Delete(factoryPath key) with _ -> ()
+                    (true, label + " restored to the bundled version.")
             with ex ->
-                (false, "Could not restore OptiScaler: " + ex.Message)
+                (false, "Could not restore " + label + ": " + ex.Message)
+
+        let restoreOptiScaler () : bool * string =
+            restoreOptiFolder optiScalerDirName optiScalerKey (optiFactoryDir ()) "OptiScaler"
+
+        let restoreOptiScalerNeural () : bool * string =
+            restoreOptiFolder
+                optiScalerNeuralDirName
+                optiScalerNeuralKey
+                (optiNeuralFactoryDir ())
+                "OptiScaler neural-upstream"
 
     /// What the app can tell about a game just by looking at its files.
     /// `nvngx_dlssnr.dll` is the one file DLSS 5 cannot run without, so its
@@ -816,6 +973,23 @@ module ModInstaller =
                 ""
         with _ ->
             ""
+
+    /// True when the recorded install carried the neural upstream add-on. An
+    /// older manifest has no such field and reads back as false, which is what
+    /// those installs were.
+    let installedNeuralAddon (game: GameItem) : bool =
+        try
+            let path = manifestPath game
+
+            if File.Exists(path) then
+                let options = JsonSerializerOptions()
+                options.PropertyNameCaseInsensitive <- true
+                let m = JsonSerializer.Deserialize<InstallManifest>(File.ReadAllText(path), options)
+                not (String.IsNullOrWhiteSpace(m.Neural))
+            else
+                false
+        with _ ->
+            false
 
     let inspect (game: GameItem) (exePath: string) (dlssDirs: string[]) (streamlineDirs: string[]) : Dlss5Status =
         let managed = isInstalled game
@@ -1060,15 +1234,30 @@ module ModInstaller =
 
     /// Copies a payload folder into a target folder keeping the tree shape, so
     /// "reshade-shaders\Shaders" merges straight into the game's own folder.
+    ///
+    /// A skip entry is a filename, or a folder name ending in "\" to leave a
+    /// whole subtree behind - the neural upstream payload keeps its
+    /// documentation and its build-time downloads next to its binaries, and
+    /// neither belongs in someone's game folder.
     let private copyTreeExcept (tracker: Tracker) (sourceDir: string) (targetDir: string) (skip: string[]) : int =
         let mutable count = 0
 
         if Directory.Exists(sourceDir) then
-            let skipSet = HashSet<string>(skip, StringComparer.OrdinalIgnoreCase)
+            let isSubtree (s: string) = s.EndsWith("\\", StringComparison.Ordinal)
+
+            let skipSet =
+                HashSet<string>(skip |> Array.filter (isSubtree >> not), StringComparer.OrdinalIgnoreCase)
+
+            let skipTrees = skip |> Array.filter isSubtree
 
             for src in Directory.GetFiles(sourceDir, "*", SearchOption.AllDirectories) do
-                if not (skipSet.Contains(Path.GetFileName(src))) then
-                    let relative = src.Substring(sourceDir.Length).TrimStart('\\', '/')
+                let relative = src.Substring(sourceDir.Length).TrimStart('\\', '/')
+
+                let inSkippedTree =
+                    skipTrees
+                    |> Array.exists (fun t -> relative.StartsWith(t, StringComparison.OrdinalIgnoreCase))
+
+                if not (skipSet.Contains(Path.GetFileName(src))) && not inSkippedTree then
                     let dst = Path.Combine(targetDir, relative)
                     Directory.CreateDirectory(Path.GetDirectoryName(dst)) |> ignore
                     tracker.Copy(src, dst)
@@ -1141,6 +1330,75 @@ module ModInstaller =
             true
         else
             false
+
+    /// Puts the overlay add-on beside the game and writes the settings file it
+    /// reads on start-up.
+    ///
+    /// The add-on is a ReShade add-on, so this alone is enough on every route
+    /// that installs ReShade. The OptiScaler route arranges its own host first
+    /// - see the neural-upstream branch in `install`.
+    ///
+    /// The settings file goes through the tracker like any other file, so a
+    /// user who had already tuned the overlay by hand gets that copy backed up
+    /// and handed back on removal.
+    let private deployOverlay
+        (tracker: Tracker)
+        (exeDir: string)
+        (modRoot: string)
+        (overlay: OverlayOptions)
+        (report: Progress)
+        (at: float)
+        : bool =
+
+        let source = Path.Combine(modRoot, overlayAddonName)
+
+        if not overlay.Enabled || not (File.Exists(source)) then
+            false
+        else
+
+        report "Installing the in-game overlay..." at
+        tracker.Copy(source, Path.Combine(exeDir, overlayAddonName))
+
+        // The theme the user picked in Settings. Everything else is left for
+        // the overlay's own Settings tab to write, so re-installing never
+        // undoes what someone set up in game.
+        let theme =
+            if overlayThemes |> Array.exists (fun t -> String.Equals(t, overlay.Theme, StringComparison.OrdinalIgnoreCase)) then
+                overlay.Theme
+            else
+                overlayThemes.[0]
+
+        let (key, ctrl, shift, alt) = parseOverlayHotkey overlay.Hotkey
+        let flag (value: bool) = if value then "true" else "false"
+
+        let contents =
+            String.Join(
+                "\r\n",
+                [ "; DLSS 5 Overlay - written by DLSS 5 MANAGER."
+                  "; The overlay rewrites this file when you change something from"
+                  "; inside the game, so hand edits survive until the next install."
+                  ""
+                  "[Overlay]"
+                  "Enabled=true"
+                  "Theme=" + theme
+                  sprintf "HotKey=%d" key
+                  "HotKeyCtrl=" + flag ctrl
+                  "HotKeyShift=" + flag shift
+                  "HotKeyAlt=" + flag alt
+                  "" ]
+            )
+
+        try
+            // Staged through a temporary file so the tracker performs the same
+            // backup it does for every other file it puts down.
+            let staging = Path.Combine(Path.GetTempPath(), "dlss5-overlay-" + Guid.NewGuid().ToString("N") + ".ini")
+            File.WriteAllText(staging, contents)
+            tracker.Copy(staging, Path.Combine(exeDir, overlayConfigName))
+            try File.Delete(staging) with _ -> ()
+        with _ ->
+            ()
+
+        true
 
     /// The user's own additions, deployed next to the executable at the end of
     /// every route. A folder keeps its name and goes in whole; a file lands
@@ -1323,6 +1581,13 @@ module ModInstaller =
         (mode: InstallMode)
         (arch: InstallArch)
         (optiApi: OptiScalerApi)
+        /// Neural upstream: send the extra add-on along on the DX12 / DX11 /
+        /// DX9 and AMD routes. OptiScaler has its own neural payload and
+        /// ignores this.
+        (neural: bool)
+        /// The in-game overlay, as set up in Settings. Ignored on any route
+        /// `overlaySupported` says no to.
+        (overlay: OverlayOptions)
         (report: Progress)
         : InstallOutcome =
         // Carry forward what a previous run already recorded, so re-running the
@@ -1361,6 +1626,24 @@ module ModInstaller =
             let exeDir = Path.GetDirectoryName(exePath)
             let dlssnrFile = Path.Combine(modRoot, dlss5DirName, dlssnrFileName)
 
+            // Neural upstream rides along with the ReShade and AMD routes.
+            // OptiScaler picks a whole different payload for it instead, so it
+            // never reads this.
+            let neuralWanted = neural && mode <> OptiScalerMode && mode <> Emulator
+            let neuralAddonFile = Path.Combine(modRoot, neuralAddonName)
+
+            // The overlay only travels with the routes that can actually host
+            // it, whatever the settings page happens to say.
+            let overlayWanted =
+                { overlay with Enabled = overlay.Enabled && overlaySupported mode optiApi }
+
+            /// Drops the add-on wherever a route can actually load it: next to
+            /// the executable, or inside host64 on a 32-bit install, which is
+            /// where every other 64-bit module of that install already lives.
+            let deployNeuralAddon (tracker: Tracker) (targetDir: string) =
+                neuralWanted
+                && copyIfEnabled tracker neuralAddonName neuralAddonFile (Path.Combine(targetDir, neuralAddonName))
+
             let writeManifest () =
                 let manifest =
                     { GameId = safeId game
@@ -1370,6 +1653,7 @@ module ModInstaller =
                       Mode = modeKey mode
                       Arch = archKey arch
                       Api = optiApiKey optiApi
+                      Neural = (if neuralWanted then "1" else "")
                       Files = tracker.Entries }
 
                 let options = JsonSerializerOptions()
@@ -1384,11 +1668,12 @@ module ModInstaller =
             // ROUTE A - DX12 + OPTISCALER (recommended, self-contained)
             // =============================================================
             if mode = OptiScalerMode then
-                let optiRoot = Path.Combine(modRoot, optiScalerDirName)
+                let optiDirName = optiScalerPayloadDirName optiApi
+                let optiRoot = Path.Combine(modRoot, optiDirName)
 
                 if not (Directory.Exists(optiRoot)) then
                     { Success = false
-                      Message = "The \"" + optiScalerDirName + "\" payload is missing from \"mod files\"." }
+                      Message = "The \"" + optiDirName + "\" payload is missing from \"mod files\"." }
                 elif not (File.Exists(dlssnrFile)) then
                     { Success = false; Message = "Missing mod file: " + dlssnrFileName }
                 else
@@ -1410,13 +1695,17 @@ module ModInstaller =
                 // Skipped on purpose: the model is deployed once from "mod
                 // files" rather than copied twice, OptiScaler.dll goes straight
                 // to its proxy name, and the setup scripts are never needed in
-                // the game folder because nothing runs them.
+                // the game folder because nothing runs them. The last four are
+                // the neural upstream payload's own reading material and the
+                // manifest its download script works from - the licences under
+                // Licenses\ still travel, as they always did.
                 let deployed =
                     copyTreeExcept
                         tracker
                         optiRoot
                         exeDir
-                        [| dlssnrFileName; "OptiScaler.dll"; "setup_windows.bat"; "setup_linux.sh" |]
+                        [| dlssnrFileName; "OptiScaler.dll"; "setup_windows.bat"; "setup_linux.sh"
+                           "README.md"; "INSTALL-DLSSNR.md"; "get_streamline.ps1"; "docs\\"; "redist\\" |]
 
                 report (sprintf "Hooking OptiScaler as %s..." slotName) 0.42
                 tracker.Copy(optiDll, Path.Combine(exeDir, slotName))
@@ -1434,10 +1723,10 @@ module ModInstaller =
                 let optiRuntimes =
                     deployRuntimes tracker game exePath exeDir modRoot plan report 0.68 0.16
 
-                // OptiScaler never installs ReShade. But if the user already
-                // had it, the effects belong in its folder, so they go in then
-                // and only then - an empty reshade-shaders next to a game with
-                // no ReShade would just be litter.
+                // OptiScaler never installs ReShade. But if the user already had
+                // it, the effects belong in its folder, so they go in then and
+                // only then - an empty reshade-shaders next to a game with no
+                // ReShade would just be litter.
                 let optiEffects =
                     if GameAnalyzer.isReShadeInstalled exePath then
                         report "Adding DLSS 5 effects to the existing ReShade..." 0.86
@@ -1446,7 +1735,7 @@ module ModInstaller =
                     else
                         0
 
-                let extraFiles = deployExtras tracker exeDir mode arch optiApi report 0.88
+                let extraFiles = deployExtras tracker exeDir mode arch optiApi report 0.90
 
 
                 report "Writing restore point..." 0.92
@@ -1457,12 +1746,15 @@ module ModInstaller =
                   Message =
                     String.Join(
                         " • ",
-                        [ yield "DX12 + OptiScaler (recommended) installed"
+                        [ yield
+                              (match optiApi with
+                               | OptiNeural -> "OptiScaler neural-upstream installed"
+                               | OptiVulkan -> "Vulkan + OptiScaler installed"
+                               | OptiDx12 -> "DX12 + OptiScaler (recommended) installed")
                           yield sprintf "%d OptiScaler file(s) deployed" (deployed + 1)
                           yield sprintf "Hooked as %s" slotName
                           yield! optiRuntimes.Summary
                           yield "Ray reconstruction model deployed next to the game"
-
 
                           if extraFiles > 0 then
 
@@ -1507,6 +1799,12 @@ module ModInstaller =
                 report "Deploying DLSS 5 ray reconstruction model (165 MB)..." 0.60
                 copyIfEnabled tracker dlssnrFileName dlssnrFile (Path.Combine(exeDir, dlssnrFileName)) |> ignore
 
+                let neuralDeployed =
+                    if neuralWanted then
+                        report "Installing the neural upstream add-on..." 0.78
+
+                    deployNeuralAddon tracker exeDir
+
                 let extraFiles = deployExtras tracker exeDir mode arch optiApi report 0.90
 
 
@@ -1522,6 +1820,7 @@ module ModInstaller =
                           sprintf "%d payload file(s) deployed" (deployed + 1)
                           sprintf "Hooked as %s" slotName
                           "Ray reconstruction model deployed next to the game"
+                          (if neuralDeployed then "Neural upstream add-on deployed" else "")
                           (if extraFiles > 0 then sprintf "%d extra file(s) deployed" extraFiles else "") ]
                         |> List.filter (fun s -> s <> "")
                     ) }
@@ -1547,15 +1846,22 @@ module ModInstaller =
                       Message = "The \"" + emulatorPayloadDirName + "\" payload is missing from \"mod files\"." }
                 else
 
-                // Emulators render through Vulkan, so that is the API ReShade
-                // hooks. Vulkan installs differ from the DLL-swap routes - the
-                // setup can leave several files behind - so we note what was
-                // there first and record whatever is new.
-                report "Installing ReShade runtime (vulkan)..." 0.10
+                // Nearly every emulator renders through Vulkan, so that is the
+                // API ReShade hooks - Ryujinx is the exception, and the
+                // catalogue is what knows which is which. A Vulkan install
+                // differs from the DLL-swap routes - the setup can leave
+                // several files behind - so we note what was there first and
+                // record whatever is new.
+                let emulatorApi = EmulatorCatalog.reShadeApi exePath
+                let isVulkanEmulator = emulatorApi = "vulkan"
+                report (sprintf "Installing ReShade runtime (%s)..." emulatorApi) 0.10
 
                 let reshadeArtifacts =
-                    [ "vulkan-1.dll"; "ReShade64.json"; "ReShade64.dll"
-                      "ReShade.ini"; "ReShadePreset.ini"; "ReShade.log" ]
+                    [ if isVulkanEmulator then
+                          yield! [ "vulkan-1.dll"; "ReShade64.json"; "ReShade64.dll" ]
+                      else
+                          yield emulatorApi + ".dll"
+                      yield! [ "ReShade.ini"; "ReShadePreset.ini"; "ReShade.log" ] ]
 
                 let before =
                     reshadeArtifacts
@@ -1563,11 +1869,17 @@ module ModInstaller =
                     |> Set.ofList
 
                 let (setupOk, setupError) =
-                    if ExtrasStore.isPayloadEnabled reShadeSetupKey then
-                        runReShadeSetup setupExe exePath "vulkan" report
-                    else
+                    if not (ExtrasStore.isPayloadEnabled reShadeSetupKey) then
                         report "ReShade setup is switched off, skipping." 0.16
                         (true, "")
+                    elif not isVulkanEmulator && GameAnalyzer.isReShadeInstalled exePath then
+                        // Re-running the setup over an existing ReShade returns
+                        // a non-zero exit code, and on this route only the
+                        // DLL-swap install leaves something to find.
+                        report "ReShade already present, skipping." 0.16
+                        (true, "")
+                    else
+                        runReShadeSetup setupExe exePath emulatorApi report
 
                 if not setupOk && not (File.Exists(Path.Combine(exeDir, "ReShade.ini"))) then
                     { Success = false; Message = setupError }
@@ -1592,6 +1904,7 @@ module ModInstaller =
                 report "Deploying DLSS 5 ray reconstruction model (165 MB)..." 0.74
                 copyIfEnabled tracker dlssnrFileName dlssnrFile (Path.Combine(exeDir, dlssnrFileName)) |> ignore
 
+                let overlayFiles = deployOverlay tracker exeDir modRoot overlayWanted report 0.82
                 let extraFiles = deployExtras tracker exeDir mode arch optiApi report 0.90
 
 
@@ -1603,10 +1916,13 @@ module ModInstaller =
                   Message =
                     String.Join(
                         " • ",
-                        [ "Emulator - ReShade (Vulkan) + DLSS 5 installed"
+                        [ sprintf
+                              "Emulator - ReShade (%s) + DLSS 5 installed"
+                              (if isVulkanEmulator then "Vulkan" else "DirectX 12")
                           sprintf "Effects deployed (%d file(s))" effectFiles
                           sprintf "Emulator payload deployed (%d file(s))" payloadFiles
                           "DLSS runtime and ray reconstruction model deployed"
+                          (if overlayFiles then "Overlay installed" else "")
                           (if extraFiles > 0 then sprintf "%d extra file(s) deployed" extraFiles else "") ]
                         |> List.filter (fun s -> s <> "")
                     ) }
@@ -1830,6 +2146,26 @@ module ModInstaller =
                     copyIfEnabled tracker dlssnrFileName dlssnrFile (Path.Combine(target, dlssnrFileName)) |> ignore
 
             // -------------------------------------------------------------
+            // 5a. Neural upstream add-on, when the user asked for it
+            // -------------------------------------------------------------
+            // 64-bit like every other add-on here, so a 32-bit game gets it in
+            // host64 alongside the modules that can actually load it.
+            let neuralDeployed =
+                if neuralWanted then
+                    report "Installing the neural upstream add-on..." 0.86
+                    let target = if is32Bit then Path.Combine(exeDir, host64DirName) else exeDir
+                    deployNeuralAddon tracker target
+                else
+                    false
+
+            // -------------------------------------------------------------
+            // 5b. In-game overlay
+            // -------------------------------------------------------------
+            // This route already installed ReShade, so the add-on needs
+            // nothing beyond being put next to it.
+            let overlayFiles = deployOverlay tracker exeDir modRoot overlayWanted report 0.88
+
+            // -------------------------------------------------------------
             // 6. Manifest
             // -------------------------------------------------------------
             let extraFiles = deployExtras tracker exeDir mode arch optiApi report 0.90
@@ -1862,6 +2198,12 @@ module ModInstaller =
 
                       yield! runtimes.Summary
                       yield sprintf "Ray reconstruction model deployed to %d location(s)" dlssnrTargets.Length
+
+                      if neuralDeployed then
+                          yield "Neural upstream add-on deployed"
+
+                      if overlayFiles then
+                          yield "Overlay installed"
 
                       if extraFiles > 0 then
                           yield sprintf "%d extra file(s) deployed" extraFiles ]
@@ -2050,7 +2392,14 @@ module ModInstaller =
                         // ReShade sits on a name the game could also use, so it
                         // is only removed when its own version resource says so
                         // and the manifest did not already deal with it.
-                        for name in [ "dxgi.dll"; "d3d9.dll"; "d3d11.dll"; "d3d12.dll"; "opengl32.dll" ] do
+                        // ReShade64.dll is here rather than in the exclusive
+                        // sweep for the same reason as the rest: it is only
+                        // ours when its own version resource says so. Nothing
+                        // installs it any more, but an install made while the
+                        // OptiScaler route briefly hosted the overlay still has
+                        // one, and that has to come off cleanly.
+                        for name in [ "dxgi.dll"; "d3d9.dll"; "d3d11.dll"; "d3d12.dll"; "opengl32.dll"
+                                      "ReShade64.dll" ] do
                             let p = Path.Combine(root, name)
 
                             try

@@ -14,10 +14,10 @@
     <Authors>NODIX TECH</Authors>
     <Description>DLSS 5 MANAGER — built by NODIX TECH, published by Numidia Studios.</Description>
     <Copyright>© 2026 Numidia Studios. All rights reserved. Built by NODIX TECH.</Copyright>
-    <Version>1.1.8</Version>
-    <AssemblyVersion>1.1.8.0</AssemblyVersion>
-    <FileVersion>1.1.8.0</FileVersion>
-    <InformationalVersion>1.1.8</InformationalVersion>
+    <Version>1.1.9</Version>
+    <AssemblyVersion>1.1.9.0</AssemblyVersion>
+    <FileVersion>1.1.9.0</FileVersion>
+    <InformationalVersion>1.1.9</InformationalVersion>
 
     <!-- ================================================================= -->
     <!-- RUNTIME FOOTPRINT                                                  -->
@@ -51,6 +51,7 @@
     <Compile Include="Services\GameAnalyzer.fs" />
     <Compile Include="Services\IconExtractor.fs" />
     <Compile Include="Services\GameScanner.fs" />
+    <Compile Include="Services\EmulatorCatalog.fs" />
     <Compile Include="Services\ModInstaller.fs" />
     <Compile Include="Services\AnalysisStore.fs" />
     <Compile Include="Services\UpdateChecker.fs" />

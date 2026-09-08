@@ -128,6 +128,7 @@ type ExtraRowViewModel(key: string, items: ExtrasStore.ExtraItem list) =
     member _.IsAllModes = modes.Length = 0
     member _.IsOptiDx12Mode = has "optiscaler-dx12"
     member _.IsOptiVulkanMode = has "optiscaler-vulkan"
+    member _.IsOptiNeuralMode = has "optiscaler-neural"
     member _.IsDx12Mode = has "dx12"
     member _.IsDx1164Mode = has "dx11-64"
     member _.IsDx1132Mode = has "dx11-32"
@@ -150,6 +151,7 @@ type ExtraRowViewModel(key: string, items: ExtrasStore.ExtraItem list) =
                     | "optiscaler"
                     | "optiscaler-dx12" -> "OptiScaler"
                     | "optiscaler-vulkan" -> "OptiScaler Vulkan"
+                    | "optiscaler-neural" -> "OptiScaler neural"
                     | "dx12" -> "DX12"
                     | "dx11" -> "DX11"
                     | "dx11-64" -> "DX11 64-bit"
@@ -175,7 +177,7 @@ type ExtraRowViewModel(key: string, items: ExtrasStore.ExtraItem list) =
             |> Option.defaultValue [||]
 
         for name in
-            [ "IsAllModes"; "IsOptiDx12Mode"; "IsOptiVulkanMode"; "IsDx12Mode"
+            [ "IsAllModes"; "IsOptiDx12Mode"; "IsOptiVulkanMode"; "IsOptiNeuralMode"; "IsDx12Mode"
               "IsDx1164Mode"; "IsDx1132Mode"; "IsDx964Mode"; "IsDx932Mode"
               "IsAmdMode"; "IsEmulatorMode"; "ModesText" ] do
             this.RaisePropertyChanged(name)
@@ -255,14 +257,33 @@ type MainViewModel() as this =
     /// 32-bit, matching what those two eras of games actually are.
     let mutable installArch = ModInstaller.Bit64
 
-    /// OptiScaler only: which API the game renders with.
+    /// OptiScaler only: which API the game renders with, or the neural
+    /// upstream build of OptiScaler itself.
     let mutable optiApi = ModInstaller.OptiDx12
+
+    /// Neural upstream on the DX12 / DX11 / DX9 and AMD routes: one extra
+    /// add-on next to the game. Off unless the user asks for it.
+    let mutable useNeuralAddon = false
 
     /// The route and build recorded in the manifest for the open game, "" when
     /// this app did not install it. Drives the Install / Switch / Remove button.
     let mutable installedRoute = ""
     let mutable installedArch = ""
     let mutable installedApi = ""
+    let mutable installedNeural = false
+
+    /// True once the user has picked a route in the open sheet. Detection then
+    /// stops overriding it - see SetInstallMode.
+    let mutable routeChosenByUser = false
+
+    /// True when the sheet opened on a game that already had an install.
+    ///
+    /// Automatic routing is for a game nobody has modded yet: opening one of
+    /// those on the option that suits it is the whole point. A game that has
+    /// been installed already has an answer, and removing that install must not
+    /// turn it back into a question - so this stays true for the life of the
+    /// sheet even after the manifest is gone.
+    let mutable sheetOpenedInstalled = false
 
     /// The detected-target readout starts folded away: it is reference
     /// information, and the sheet is about choosing and installing.
@@ -288,6 +309,7 @@ type MainViewModel() as this =
             [ ModInstaller.feedAddonName
               ModInstaller.feedAddon32Name
               ModInstaller.renodxAddonName
+              ModInstaller.neuralAddonName
               GameAnalyzer.dlssnrFileName ]
             |> List.map (fun key ->
                 PayloadRowViewModel(key, (fun () -> ModInstaller.Payload.describe key), true))
@@ -365,6 +387,12 @@ type MainViewModel() as this =
 
     /// Performance mode: no moving background, no card hover animation.
     let mutable isPerformanceMode = false
+
+    /// The in-game overlay, and the look it wears. Deployed with every install
+    /// on the routes that can host it - see `ModInstaller.overlaySupported`.
+    let mutable isOverlayEnabled = true
+    let mutable overlayTheme = ModInstaller.overlayThemes.[0]
+    let mutable overlayHotkey = ModInstaller.overlayHotkeys.[0]
 
     let createRadialBrush (centerHex: string) =
         let brush = RadialGradientBrush()
@@ -492,6 +520,19 @@ type MainViewModel() as this =
 
         isAmdMode <- settings.AmdMode
         isPerformanceMode <- settings.PerformanceMode
+        isOverlayEnabled <- not settings.OverlayDisabled
+
+        overlayTheme <-
+            if ModInstaller.overlayThemes |> Array.exists (fun t -> t = settings.OverlayTheme) then
+                settings.OverlayTheme
+            else
+                ModInstaller.overlayThemes.[0]
+
+        overlayHotkey <-
+            if ModInstaller.overlayHotkeys |> Array.exists (fun k -> k = settings.OverlayHotkey) then
+                settings.OverlayHotkey
+            else
+                ModInstaller.overlayHotkeys.[0]
 
         for (key, items) in ExtrasStore.groups () do
             extraRows.Add(ExtraRowViewModel(key, items))
@@ -515,7 +556,10 @@ type MainViewModel() as this =
                       Language = languageCode
                       SupportPromptVersion = supportPromptVersion
                       AmdMode = isAmdMode
-                      PerformanceMode = isPerformanceMode })
+                      PerformanceMode = isPerformanceMode
+                      OverlayDisabled = not isOverlayEnabled
+                      OverlayTheme = overlayTheme
+                      OverlayHotkey = overlayHotkey })
 
             supportPromptTimer.Start()
 
@@ -597,7 +641,10 @@ type MainViewModel() as this =
                       Language = languageCode
                       SupportPromptVersion = supportPromptVersion
                       AmdMode = isAmdMode
-                      PerformanceMode = isPerformanceMode }
+                      PerformanceMode = isPerformanceMode
+                      OverlayDisabled = not isOverlayEnabled
+                      OverlayTheme = overlayTheme
+                      OverlayHotkey = overlayHotkey }
 
     /// Shown translated, stored in English: `AtmosphereOption.Key` is the
     /// identity. The collection instance is stable for the life of the window.
@@ -632,7 +679,10 @@ type MainViewModel() as this =
                           Language = languageCode
                           SupportPromptVersion = supportPromptVersion
                           AmdMode = isAmdMode
-                          PerformanceMode = isPerformanceMode }
+                          PerformanceMode = isPerformanceMode
+                          OverlayDisabled = not isOverlayEnabled
+                          OverlayTheme = overlayTheme
+                          OverlayHotkey = overlayHotkey }
 
     member this.SelectedColorAtmosphere
         with get () =
@@ -660,7 +710,10 @@ type MainViewModel() as this =
                       Language = languageCode
                       SupportPromptVersion = supportPromptVersion
                       AmdMode = isAmdMode
-                      PerformanceMode = isPerformanceMode }
+                      PerformanceMode = isPerformanceMode
+                      OverlayDisabled = not isOverlayEnabled
+                      OverlayTheme = overlayTheme
+                      OverlayHotkey = overlayHotkey }
 
     // ---------------------------------------------------------------------
     // LANGUAGE
@@ -701,7 +754,10 @@ type MainViewModel() as this =
                       Language = code
                       SupportPromptVersion = supportPromptVersion
                       AmdMode = isAmdMode
-                      PerformanceMode = isPerformanceMode }
+                      PerformanceMode = isPerformanceMode
+                      OverlayDisabled = not isOverlayEnabled
+                      OverlayTheme = overlayTheme
+                      OverlayHotkey = overlayHotkey }
 
     /// "TOTAL GAMES: 42" in the current language.
     member this.TotalGamesText = loc.TotalGames(totalGamesCount)
@@ -739,7 +795,10 @@ type MainViewModel() as this =
                       Language = languageCode
                       SupportPromptVersion = supportPromptVersion
                       AmdMode = isAmdMode
-                      PerformanceMode = isPerformanceMode }
+                      PerformanceMode = isPerformanceMode
+                      OverlayDisabled = not isOverlayEnabled
+                      OverlayTheme = overlayTheme
+                      OverlayHotkey = overlayHotkey }
 
     member this.IsOrbitalSpheresVisible = selectedGeometricMotif = "Orbital Spheres"
     member this.IsPrismAurorasVisible = selectedGeometricMotif = "Prism Auroras"
@@ -762,7 +821,10 @@ type MainViewModel() as this =
                       Language = languageCode
                       SupportPromptVersion = supportPromptVersion
                       AmdMode = isAmdMode
-                      PerformanceMode = isPerformanceMode }
+                      PerformanceMode = isPerformanceMode
+                      OverlayDisabled = not isOverlayEnabled
+                      OverlayTheme = overlayTheme
+                      OverlayHotkey = overlayHotkey }
 
     member this.IsTopBarLayout = not isSidebarLayout
 
@@ -885,6 +947,10 @@ type MainViewModel() as this =
     member this.ShowAmdCard =
         matchesCard searchText [ "amd"; "rdna"; "radeon"; "amd mode"; "beta"; "gpu" ]
 
+    member this.ShowOverlayCard =
+        matchesCard searchText [ loc.OverlaySection; loc.OverlayTitle; loc.OverlayDesc; loc.OverlayStyle
+                                 "overlay"; "hud"; "fps"; "vram"; "telemetry"; "theme"; "in-game" ]
+
     member this.ShowSupportCard =
         matchesCard searchText [ "support"; "donate"; "ko-fi"; "kofi"; "tutorial"; "tutorials"; "guide"
                                  "youtube"; "video"; "help"; "channel"; "nodix" ]
@@ -903,6 +969,7 @@ type MainViewModel() as this =
             || this.ShowPayloadCard
             || this.ShowPerformanceCard
             || this.ShowAmdCard
+            || this.ShowOverlayCard
             || this.ShowSupportCard
             || this.ShowAboutCard
         )
@@ -927,6 +994,7 @@ type MainViewModel() as this =
         this.RaisePropertyChanged("ShowPayloadCard")
         this.RaisePropertyChanged("ShowPerformanceCard")
         this.RaisePropertyChanged("ShowAmdCard")
+        this.RaisePropertyChanged("ShowOverlayCard")
         this.RaisePropertyChanged("ShowSupportCard")
         this.RaisePropertyChanged("ShowAboutCard")
         this.RaisePropertyChanged("HasNoSettingsMatch")
@@ -1067,8 +1135,21 @@ type MainViewModel() as this =
                         this.RaisePropertyChanged("TotalGamesText")
                         filterGamesList ()
                         this.RaisePropertyChanged("HasGames")
-                        this.IsScanning <- false
                         this.ScanStatusText <- sprintf "%d Games Ready" combined.Length)
+
+                    // The emulators are their own search, and it follows on in
+                    // the same task with no gap - one press of Re-scan settles
+                    // the whole library, games and emulators together.
+                    let emulatorsAdded = this.RunEmulatorDetection()
+
+                    Dispatcher.UIThread.Post(fun () ->
+                        this.IsScanning <- false
+
+                        this.ScanStatusText <-
+                            if emulatorsAdded > 0 then
+                                sprintf "%d Games Ready · %d emulator(s) added" combined.Length emulatorsAdded
+                            else
+                                sprintf "%d Games Ready" combined.Length)
                 with ex ->
                     printfn "[DLSS5Manager Error] Scan failed: %s" (ex.ToString())
                     Dispatcher.UIThread.Post(fun () ->
@@ -1186,7 +1267,17 @@ type MainViewModel() as this =
     member this.IsDx11Mode = (installMode = ModInstaller.Dx11)
     member this.IsDx9Mode = (installMode = ModInstaller.Dx9)
 
+    /// The user picked this route themselves, so detection must stop having an
+    /// opinion. Without this, removing an install cleared `installedRoute` and
+    /// the next analysis pass moved the sheet to whatever the game looked like
+    /// - jumping the user somewhere they had not asked to go.
     member this.SetInstallMode(mode: ModInstaller.InstallMode) =
+        routeChosenByUser <- true
+        this.ApplyInstallMode(mode)
+
+    /// The same change made on the app's own initiative, which leaves the
+    /// user's claim on the route alone.
+    member private this.ApplyInstallMode(mode: ModInstaller.InstallMode) =
         if installMode <> mode then
             installMode <- mode
 
@@ -1222,10 +1313,74 @@ type MainViewModel() as this =
                       Language = languageCode
                       SupportPromptVersion = supportPromptVersion
                       AmdMode = isAmdMode
-                      PerformanceMode = isPerformanceMode }
+                      PerformanceMode = isPerformanceMode
+                      OverlayDisabled = not isOverlayEnabled
+                      OverlayTheme = overlayTheme
+                      OverlayHotkey = overlayHotkey }
 
     /// True while the open sheet will install through the AMD payload.
     member this.IsAmdRouteActive = isAmdMode && not isEmulatorTarget
+
+    // ---------------------------------------------------------------------
+    // IN-GAME OVERLAY
+    // ---------------------------------------------------------------------
+    /// Off means no install deploys the overlay. It does not touch a game that
+    /// already has one - that comes off with the mod, like everything else.
+    member this.IsOverlayEnabled
+        with get () = isOverlayEnabled
+        and set value =
+            if isOverlayEnabled <> value then
+                isOverlayEnabled <- value
+                this.RaisePropertyChanged("IsOverlayEnabled")
+                this.SaveOverlaySettings()
+
+    /// The theme names, shown as-is: they are identities the add-on resolves,
+    /// not labels, so they stay English in every language exactly like the
+    /// colour atmospheres do.
+    member this.OverlayThemes = ModInstaller.overlayThemes
+
+    member this.SelectedOverlayTheme
+        with get () = overlayTheme
+        and set (value: string) =
+            if not (String.IsNullOrWhiteSpace(value)) && overlayTheme <> value then
+                overlayTheme <- value
+                this.RaisePropertyChanged("SelectedOverlayTheme")
+                this.SaveOverlaySettings()
+
+    /// Which key opens the overlay in game. The overlay's own Settings tab can
+    /// change it too; whichever was set last is what the next install writes.
+    member this.OverlayHotkeys = ModInstaller.overlayHotkeys
+
+    member this.SelectedOverlayHotkey
+        with get () = overlayHotkey
+        and set (value: string) =
+            if not (String.IsNullOrWhiteSpace(value)) && overlayHotkey <> value then
+                overlayHotkey <- value
+                this.RaisePropertyChanged("SelectedOverlayHotkey")
+                this.SaveOverlaySettings()
+
+    member private this.SaveOverlaySettings() =
+        GameScanner.saveSettings
+            { IsSidebarLayout = isSidebarLayout
+              ColorAtmosphere = selectedColorAtmosphere
+              GeometricMotif = selectedGeometricMotif
+              Language = languageCode
+              SupportPromptVersion = supportPromptVersion
+              AmdMode = isAmdMode
+              PerformanceMode = isPerformanceMode
+              OverlayDisabled = not isOverlayEnabled
+              OverlayTheme = overlayTheme
+              OverlayHotkey = overlayHotkey }
+
+    /// What the current sheet would install, so the manage sheet can say
+    /// whether the overlay is coming along.
+    member this.IsOverlayRouteSupported =
+        ModInstaller.overlaySupported installMode optiApi
+
+    member this.OverlayOptions: ModInstaller.OverlayOptions =
+        { Enabled = isOverlayEnabled
+          Theme = overlayTheme
+          Hotkey = overlayHotkey }
 
     /// The 32-bit and DX9 routes only exist for DX11 and DX9.
     member this.IsArchChoiceVisible =
@@ -1237,6 +1392,7 @@ type MainViewModel() as this =
 
     member this.IsOptiDx12 = (optiApi = ModInstaller.OptiDx12)
     member this.IsOptiVulkan = (optiApi = ModInstaller.OptiVulkan)
+    member this.IsOptiNeural = (optiApi = ModInstaller.OptiNeural)
 
     member this.SetOptiApi(api: ModInstaller.OptiScalerApi) =
         if optiApi <> api then
@@ -1249,6 +1405,33 @@ type MainViewModel() as this =
 
     member this.IsOptiVulkanInstalled =
         installedRoute = "optiscaler" && installedApi = "vulkan"
+
+    member this.IsOptiNeuralInstalled =
+        installedRoute = "optiscaler" && installedApi = "neural"
+
+    /// Neural upstream is an extra add-on on the ReShade and AMD routes;
+    /// OptiScaler has its own build of it and offers that as an API instead.
+    member this.IsNeuralAddonVisible =
+        not isEmulatorTarget
+        && (isAmdMode
+            || installMode = ModInstaller.Dx12Auto
+            || installMode = ModInstaller.Dx11
+            || installMode = ModInstaller.Dx9)
+
+    member this.IsNeuralAddonOn = useNeuralAddon
+    member this.IsNeuralAddonOff = not useNeuralAddon
+
+    member this.SetNeuralAddon(on: bool) =
+        if useNeuralAddon <> on then
+            useNeuralAddon <- on
+            this.RaiseInstallModeState()
+
+    /// Marks the add-on as live only while the route it was recorded against
+    /// is the one on screen.
+    member this.IsNeuralAddonInstalled =
+        installedNeural
+        && installedRoute <> ""
+        && installedRoute = ModInstaller.modeKey installMode
 
     member this.IsBit64 = (installArch = ModInstaller.Bit64)
     member this.IsBit32 = (installArch = ModInstaller.Bit32)
@@ -1267,6 +1450,11 @@ type MainViewModel() as this =
         this.RaisePropertyChanged("IsOptiApiChoiceVisible")
         this.RaisePropertyChanged("IsOptiDx12")
         this.RaisePropertyChanged("IsOptiVulkan")
+        this.RaisePropertyChanged("IsOptiNeural")
+        this.RaisePropertyChanged("IsNeuralAddonVisible")
+        this.RaisePropertyChanged("IsOverlayRouteSupported")
+        this.RaisePropertyChanged("IsNeuralAddonOn")
+        this.RaisePropertyChanged("IsNeuralAddonOff")
         this.RaisePropertyChanged("IsBit64")
         this.RaisePropertyChanged("IsBit32")
         this.RaisePropertyChanged("InstallModeHintText")
@@ -1343,7 +1531,7 @@ type MainViewModel() as this =
         this.RaisePropertyChanged("HasDetectedArch")
         this.RaisePropertyChanged("HasDlssUpscaling")
 
-        if not (respectExisting && installedRoute <> "") then
+        if not (respectExisting && (installedRoute <> "" || routeChosenByUser || sheetOpenedInstalled)) then
             // The Direct3D generation is the hard constraint, so it is read
             // first: a DX9 title can only take the DX9 route whatever else is
             // lying in its folder. Past that, a game already shipping DLSS
@@ -1356,11 +1544,13 @@ type MainViewModel() as this =
                 elif detectedApi = "dx11" then ModInstaller.Dx11
                 else ModInstaller.Dx12Auto
 
-            this.SetInstallMode(mode)
+            this.ApplyInstallMode(mode)
             this.SetInstallArch(if detectedArch = "32" then ModInstaller.Bit32 else ModInstaller.Bit64)
 
     member this.InstallModeHintText =
         match installMode with
+        | ModInstaller.OptiScalerMode when optiApi = ModInstaller.OptiNeural ->
+            "The neural upstream build of OptiScaler, hooked the same way. ReShade is not used."
         | ModInstaller.OptiScalerMode -> "OptiScaler hooks the game directly. ReShade is not used."
         | ModInstaller.Dx12Auto -> "ReShade + RenoDX with the DLSS 5 effects."
         | ModInstaller.Dx11 -> "ReShade + RenoDX with the DLSS 5 effects."
@@ -1386,7 +1576,10 @@ type MainViewModel() as this =
             || (ModInstaller.archMatters installMode
                 && installedArch <> ModInstaller.archKey installArch)
             || (installMode = ModInstaller.OptiScalerMode
-                && installedApi <> ModInstaller.optiApiKey optiApi))
+                && installedApi <> ModInstaller.optiApiKey optiApi)
+            // Turning the neural upstream add-on on or off changes what is on
+            // the game, so it is a switch like any other.
+            || (this.IsNeuralAddonVisible && installedNeural <> useNeuralAddon))
 
     member this.ShowInstallButton = not dlss5Present && not isInstalling
     member this.ShowSwitchButton = this.IsSwitchingRoute && not isInstalling
@@ -1416,7 +1609,8 @@ type MainViewModel() as this =
     member this.SwitchButtonText =
         let route =
             match installMode with
-            | ModInstaller.OptiScalerMode -> "OptiScaler"
+            | ModInstaller.OptiScalerMode ->
+                if optiApi = ModInstaller.OptiNeural then "OptiScaler neural" else "OptiScaler"
             | ModInstaller.Dx12Auto -> "DX12"
             | ModInstaller.Dx11 -> "DX11"
             | ModInstaller.Dx9 -> "DX9"
@@ -1426,10 +1620,15 @@ type MainViewModel() as this =
 
             | ModInstaller.AmdMode -> "AMD mode"
 
+        // The add-on is part of what gets installed, so the button has to say
+        // which way the switch is going.
+        let neural =
+            if this.IsNeuralAddonVisible && useNeuralAddon then " + neural" else ""
+
         if ModInstaller.archMatters installMode then
-            sprintf "Switch to %s %s-bit" route (ModInstaller.archKey installArch)
+            sprintf "Switch to %s %s-bit%s" route (ModInstaller.archKey installArch) neural
         else
-            "Switch to " + route
+            "Switch to " + route + neural
 
     member this.ManageDlss5Text =
         if not dlss5Present then loc.NotInstalled
@@ -1459,6 +1658,8 @@ type MainViewModel() as this =
         this.RaisePropertyChanged("IsBit32Installed")
         this.RaisePropertyChanged("IsOptiDx12Installed")
         this.RaisePropertyChanged("IsOptiVulkanInstalled")
+        this.RaisePropertyChanged("IsOptiNeuralInstalled")
+        this.RaisePropertyChanged("IsNeuralAddonInstalled")
         this.RaisePropertyChanged("ManageDlss5Text")
         this.RaisePropertyChanged("ManageDlss5Brush")
 
@@ -1513,6 +1714,11 @@ type MainViewModel() as this =
             match manageCard with
             | Some card -> ModInstaller.installedOptiApi card.Game
             | None -> ""
+
+        installedNeural <-
+            match manageCard with
+            | Some card -> ModInstaller.installedNeuralAddon card.Game
+            | None -> false
 
         if not (String.IsNullOrWhiteSpace(analysis.ExecutablePath)) then
             manageExePath <- analysis.ExecutablePath
@@ -1582,9 +1788,25 @@ type MainViewModel() as this =
         installedRoute <- route
         installedArch <- arch
         installedApi <- ModInstaller.installedOptiApi card.Game
+        installedNeural <- ModInstaller.installedNeuralAddon card.Game
+
+        // Open on whatever the recorded install actually used, so the sheet
+        // offers Remove rather than a switch to itself.
+        useNeuralAddon <- installedNeural
+
+        // A fresh sheet: nothing has been picked in it yet, and whether this
+        // game arrived with an install is what decides if detection may route
+        // it at all.
+        routeChosenByUser <- false
+        sheetOpenedInstalled <- route <> ""
 
         if route = "optiscaler" then
-            this.SetOptiApi(if installedApi = "vulkan" then ModInstaller.OptiVulkan else ModInstaller.OptiDx12)
+            this.SetOptiApi(
+                match installedApi with
+                | "vulkan" -> ModInstaller.OptiVulkan
+                | "neural" -> ModInstaller.OptiNeural
+                | _ -> ModInstaller.OptiDx12
+            )
 
         // An emulator has exactly one route, so none of the game-side choices
         // apply and the detection pass is skipped entirely.
@@ -1595,16 +1817,16 @@ type MainViewModel() as this =
         this.RaisePropertyChanged("IsAmdRouteActive")
 
         if isEmulatorTarget then
-            this.SetInstallMode(ModInstaller.Emulator)
+            this.ApplyInstallMode(ModInstaller.Emulator)
         elif isAmdMode then
             // AMD mode overrides detection entirely: one payload, no choices.
-            this.SetInstallMode(ModInstaller.AmdMode)
+            this.ApplyInstallMode(ModInstaller.AmdMode)
         else
             match route with
-            | "optiscaler" -> this.SetInstallMode(ModInstaller.OptiScalerMode)
-            | "dx12" -> this.SetInstallMode(ModInstaller.Dx12Auto)
-            | "dx11" -> this.SetInstallMode(ModInstaller.Dx11)
-            | "dx9" -> this.SetInstallMode(ModInstaller.Dx9)
+            | "optiscaler" -> this.ApplyInstallMode(ModInstaller.OptiScalerMode)
+            | "dx12" -> this.ApplyInstallMode(ModInstaller.Dx12Auto)
+            | "dx11" -> this.ApplyInstallMode(ModInstaller.Dx11)
+            | "dx9" -> this.ApplyInstallMode(ModInstaller.Dx9)
             | _ -> ()
 
             // SetInstallMode resets the build to that route's default, so the
@@ -1614,6 +1836,11 @@ type MainViewModel() as this =
 
             // Nothing installed yet? Then what the game actually is decides.
             this.DetectTarget(true)
+
+        // The setters above only notify when their value moved, and opening a
+        // second game can leave them where they already were while the target
+        // itself changed. One sweep settles the whole sheet.
+        this.RaiseInstallModeState()
 
         // Everything was already measured during the scan, so the sheet opens
         // fully populated. Only a game we have never analyzed pays the cost.
@@ -1657,6 +1884,8 @@ type MainViewModel() as this =
             let target = installMode
             let targetArch = installArch
             let targetApi = optiApi
+            let targetNeural = useNeuralAddon
+            let targetOverlay = this.OverlayOptions
 
             this.InstallResultText <- ""
             this.InstallResultIsError <- false
@@ -1688,7 +1917,8 @@ type MainViewModel() as this =
                         if not removal.Success then
                             (false, "Could not remove the previous install: " + removal.Message)
                         else
-                            let outcome = ModInstaller.install game exePath plan target targetArch targetApi (scaled 0.33 0.67)
+                            let outcome =
+                                ModInstaller.install game exePath plan target targetArch targetApi targetNeural targetOverlay (scaled 0.33 0.67)
                             (outcome.Success, "Switched. " + outcome.Message)
                     with ex ->
                         (false, ex.Message)
@@ -1739,8 +1969,10 @@ type MainViewModel() as this =
                 let (succeeded, message) =
                     try
                         let outcome =
-                            if isInstallAction then ModInstaller.install game exePath plan installMode installArch optiApi report
-                            else ModInstaller.uninstall game exePath plan report
+                            if isInstallAction then
+                                ModInstaller.install game exePath plan installMode installArch optiApi useNeuralAddon this.OverlayOptions report
+                            else
+                                ModInstaller.uninstall game exePath plan report
 
                         (outcome.Success, outcome.Message)
                     with ex ->
@@ -1965,6 +2197,95 @@ type MainViewModel() as this =
                     | None -> this.ScanStatusText <- sprintf "Could not read %s" fileName))
             |> ignore
 
+    /// Finds the emulators the app knows by name, in the handful of folders
+    /// they are actually installed in. It only ever adds: anything already in
+    /// the list is left exactly as the user arranged it, so running this twice
+    /// is harmless.
+    /// The emulator half of a scan, without any of the busy-state bookkeeping:
+    /// find what the catalogue knows, build a card for each new one and hand
+    /// them to the UI thread. Returns how many were new.
+    ///
+    /// It reads the list it is comparing against from `emulators_cache.json`
+    /// rather than the on-screen collection, because that file is written
+    /// every time the collection changes and this runs off the UI thread.
+    ///
+    /// Both callers run it inside a background task; the caller owns
+    /// `IsScanning` and the closing status line.
+    member private this.RunEmulatorDetection() : int =
+        let alreadyKnown =
+            try
+                GameScanner.loadCachedEmulators ()
+                |> List.map (fun e ->
+                    if isNull e.TargetExecutablePath then "" else e.TargetExecutablePath.ToLowerInvariant())
+                |> Set.ofList
+            with _ ->
+                Set.empty
+
+        let found =
+            try
+                EmulatorCatalog.scan ()
+                |> List.filter (fun f -> not (alreadyKnown.Contains(f.ExePath.ToLowerInvariant())))
+            with _ ->
+                []
+
+        let built = System.Collections.Generic.List<GameItem>()
+
+        for entry in found do
+            Dispatcher.UIThread.Post(fun () ->
+                this.ScanStatusText <- sprintf "Reading %s (%s)..." entry.Display entry.System)
+
+            try
+                let folder = System.IO.Path.GetDirectoryName(entry.ExePath)
+
+                let item =
+                    { GameScanner.createCustomGameItem entry.Display folder entry.ExePath with
+                        LauncherTypeName = "EMULATOR" }
+
+                AnalysisStore.refreshExecutableOnly item |> ignore
+                built.Add(item)
+            with _ ->
+                ()
+
+        if built.Count > 0 then
+            Dispatcher.UIThread.Post(fun () ->
+                for item in built do
+                    let alreadyThere =
+                        allEmulators
+                        |> Seq.exists (fun c ->
+                            String.Equals(c.ExecutablePath, item.TargetExecutablePath, StringComparison.OrdinalIgnoreCase))
+
+                    if not alreadyThere then allEmulators.Add(GameCardViewModel(item))
+
+                this.RaisePropertyChanged("AllEmulatorsCount")
+                filterEmulatorsList ()
+                this.RaisePropertyChanged("HasEmulators")
+
+                try
+                    GameScanner.saveEmulatorsToCache [ for c in allEmulators -> c.Game ]
+                with _ ->
+                    ())
+
+        built.Count
+
+    /// The emulator scan on its own, from the Detect Emulators button.
+    member this.DetectEmulators() =
+        if not isScanning then
+            this.IsScanning <- true
+            this.ScanStatusText <- "Looking for emulators..."
+
+            System.Threading.Tasks.Task.Run(fun () ->
+                let added = this.RunEmulatorDetection()
+
+                Dispatcher.UIThread.Post(fun () ->
+                    this.IsScanning <- false
+
+                    this.ScanStatusText <-
+                        if added = 0 then
+                            "No new emulators found"
+                        else
+                            sprintf "%d emulator(s) added" added))
+            |> ignore
+
     member this.RemoveEmulator(card: GameCardViewModel) =
         if not (isNull (box card)) then
             if isManageOpen && (match manageCard with Some c -> Object.ReferenceEquals(c, card) | None -> false) then
@@ -2103,6 +2424,10 @@ type MainViewModel() as this =
                 this.RaisePropertyChanged("IsReShadeEnabled")
     member this.OptiScalerState = ModInstaller.Payload.describeOptiScaler ()
 
+    /// The neural upstream build of OptiScaler, swapped the same way and just
+    /// as unswitchable - the neural API has nothing to install without it.
+    member this.OptiScalerNeuralState = ModInstaller.Payload.describeOptiScalerNeural ()
+
     member this.ReplaceReShadeSetup(sourcePath: string) =
         let (ok, message) = ModInstaller.Payload.replaceReShade sourcePath
         this.PayloadStatusText <- message
@@ -2119,6 +2444,16 @@ type MainViewModel() as this =
         let (ok, message) = ModInstaller.Payload.replaceOptiScaler sourceDir
         this.PayloadStatusText <- message
         if ok then this.RaisePropertyChanged("OptiScalerState")
+
+    member this.ReplaceOptiScalerNeural(sourceDir: string) =
+        let (ok, message) = ModInstaller.Payload.replaceOptiScalerNeural sourceDir
+        this.PayloadStatusText <- message
+        if ok then this.RaisePropertyChanged("OptiScalerNeuralState")
+
+    member this.RestoreOptiScalerNeural() =
+        let (ok, message) = ModInstaller.Payload.restoreOptiScalerNeural ()
+        this.PayloadStatusText <- message
+        if ok then this.RaisePropertyChanged("OptiScalerNeuralState")
 
     /// The AMD payload: replaceable, never switchable - the route cannot
     /// install without it.

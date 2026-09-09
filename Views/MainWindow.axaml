@@ -1175,9 +1175,10 @@
                                                             BoxShadow="0 6 24 0 #45000000">
                                                         <Border.Transitions>
                                                             <Transitions>
-                                                                <BrushTransition Property="Background" Duration="0:0:0.18" Easing="CubicEaseOut" />
-                                                                <BrushTransition Property="BorderBrush" Duration="0:0:0.18" Easing="CubicEaseOut" />
-                                                                <BoxShadowsTransition Property="BoxShadow" Duration="0:0:0.18" Easing="CubicEaseOut" />
+																<ThicknessTransition Property="Margin" Duration="0:0:0.20" Easing="CubicEaseOut" />
+                                                                <BrushTransition Property="Background" Duration="0:0:0.35" Easing="CubicEaseOut" />
+                                                                <BrushTransition Property="BorderBrush" Duration="0:0:0.35" Easing="CubicEaseOut" />
+                                                                <BoxShadowsTransition Property="BoxShadow" Duration="0:0:0.35" Easing="CubicEaseOut" />
                                                             </Transitions>
                                                         </Border.Transitions>
 
@@ -1187,10 +1188,10 @@
                                                                 HorizontalAlignment="Center" VerticalAlignment="Center">
                                                             <Border.Transitions>
                                                                 <Transitions>
-                                                                    <DoubleTransition Property="Width" Duration="0:0:0.18" Easing="CubicEaseOut" />
-                                                                    <DoubleTransition Property="Height" Duration="0:0:0.18" Easing="CubicEaseOut" />
-                                                                    <BrushTransition Property="BorderBrush" Duration="0:0:0.18" Easing="CubicEaseOut" />
-                                                                    <BoxShadowsTransition Property="BoxShadow" Duration="0:0:0.18" Easing="CubicEaseOut" />
+                                                                    <DoubleTransition Property="Width" Duration="0:0:0.35" Easing="CubicEaseOut" />
+                                                                    <DoubleTransition Property="Height" Duration="0:0:0.35" Easing="CubicEaseOut" />
+                                                                    <BrushTransition Property="BorderBrush" Duration="0:0:0.35" Easing="CubicEaseOut" />
+                                                                    <BoxShadowsTransition Property="BoxShadow" Duration="0:0:0.35" Easing="CubicEaseOut" />
                                                                 </Transitions>
                                                             </Border.Transitions>
                                                             <Panel>

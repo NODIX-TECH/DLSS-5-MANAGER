@@ -1490,5 +1490,11 @@
             <Setter Property="CornerRadius" Value="16" />
         </Style>
 
+		<Style Selector="Border.GameCardBezel:pointerover">
+			<Setter Property="BorderBrush" Value="#50FFFFFF" />
+			<Setter Property="BoxShadow" Value="0 12 32 0 #55000000" />
+			<Setter Property="Margin" Value="0,-10,0,0" />
+		</Style>
+
     </Application.Styles>
 </Application>

@@ -10,6 +10,10 @@
 
 [![Download Latest Release](https://img.shields.io/badge/DOWNLOAD-LATEST%20RELEASE%20(V1.3.0)-00e676?style=for-the-badge&logo=github&logoColor=white)](https://github.com/NODIX-TECH/DLSS-5-MANAGER/releases)
 
+[![Buy Me a Coffee at Ko-fi](https://ko-fi.com/img/githubbutton_sm.svg)](https://ko-fi.com/nodix)
+
+<br>
+
 <br/>
 
 ![Platform](https://img.shields.io/badge/Platform-Windows%20x64-grey?style=flat-square)

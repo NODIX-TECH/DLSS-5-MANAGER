@@ -7,4 +7,5 @@ Mateus Jorge : renodx-mfgunlock
 danielblnc : amd rdna4 mod
 dgVoodoo : thx for dx9 support
 rakanki911 : I got the idea for the overlay and the chat feature from him
+Perseval : Without the "Live Screen" feature, it would have taken a week or more of work.
            nodix tech dlss5 manager

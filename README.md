@@ -2,7 +2,7 @@
 
 # DLSS 5 MANAGER
 
-### The first intelligent manager and one-click mod installer for DLSS 5, ReShade, and Streamline.
+### The first intelligent manager and one-click mod installer for DLSS 5, ReShade, Optisacler.live flow.
 
 <br/>
 

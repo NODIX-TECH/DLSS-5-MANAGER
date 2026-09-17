@@ -4,6 +4,8 @@
 
 ### The first intelligent manager and one-click mod installer for DLSS 5, ReShade, Optisacler.live flow.
 
+### Premium. Quiet. Fast. Be part of the community for the best DLSS 5 app
+
 <br/>
 
 [![Download Latest Release](https://img.shields.io/badge/DOWNLOAD-LATEST%20RELEASE%20(V1.2.7)-00e676?style=for-the-badge&logo=github&logoColor=white)](https://github.com/NODIX-TECH/DLSS-5-MANAGER/releases)

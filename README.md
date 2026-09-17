@@ -21,6 +21,8 @@
 
 ---
 
+### I won't add an explanation here. The app is designed to simplify the process; just open it, and everything will be right there in front of you❤️
+
 ### 📁 Storage & Cache Locations
 
 All cached metadata, custom layouts, and configuration backups are safely stored locally at:

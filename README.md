@@ -3,7 +3,7 @@
 # DLSS 5 MANAGER
 
 ### The first intelligent manager and one-click mod installer for DLSS 5, ReShade, Optisacler.live flow.
-
+### Open Source
 ### Premium. Quiet. Fast. Be part of the community for the best DLSS 5 app
 
 <br/>

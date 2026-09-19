@@ -31,7 +31,7 @@ module CommunityApi =
 
     /// Must match `wrangler secret put APP_SECRET` on the Worker.
     [<Literal>]
-    let AppSecret = "this-nodix-tech-server-is-close-if-you-are-her-you-are-a-dog"
+    let AppSecret = "00000000000000000"
 
     [<Literal>]
     let TutorialsUrl = "https://dlss5manager.app/tutorials"

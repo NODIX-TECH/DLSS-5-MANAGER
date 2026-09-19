@@ -1,0 +1,4 @@
+F# 43.5% : Interface and transfer of installation files
+C++ 32.4% : The "live flow" setup involving Python code within the `modfiles` file was not included in the published source code; however, you can view it in the application files.
+C 23.9% : Simple Live Flow Basics
+Other 0.2% :OptiScaler stabilization system, graphics card type detection, and hardware specifications.

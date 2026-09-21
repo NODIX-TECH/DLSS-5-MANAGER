@@ -27,12 +27,13 @@
 
 ### I won't add an explanation here. The app is designed to simplify the process; just open it, and everything will be right there in front of you❤️
 
+<img width="1122" height="1402" alt="dlss 5 manager is the king" src="https://github.com/user-attachments/assets/e2258b1b-3166-4d4d-9530-93f281a80a32" />
+
 ### 📁 Storage & Cache Locations
 
 All cached metadata, custom layouts, and configuration backups are safely stored locally at:
 
 ```cmd
 %LOCALAPPDATA%\DLSS5Manager\
-
-<img width="1122" height="1402" alt="dlss 5 manager is the king" src="https://github.com/user-attachments/assets/f8b5b4d9-5968-42c7-861d-cd802fd12e95" />
+ظز
 

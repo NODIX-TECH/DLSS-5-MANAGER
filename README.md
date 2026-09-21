@@ -27,7 +27,8 @@
 
 ### I won't add an explanation here. The app is designed to simplify the process; just open it, and everything will be right there in front of you❤️
 
-<img width="1122" height="1402" alt="dlss 5 manager is the king" src="https://github.com/user-attachments/assets/e2258b1b-3166-4d4d-9530-93f281a80a32" />
+<img width="1122" height="1402" alt="dlss 5 manager is the king" src="https://github.com/user-attachments/assets/1d9ee6dc-1184-4aaa-abf3-1638329065a9" />
+
 
 ### 📁 Storage & Cache Locations
 

@@ -35,5 +35,3 @@ All cached metadata, custom layouts, and configuration backups are safely stored
 
 ```cmd
 %LOCALAPPDATA%\DLSS5Manager\
-ظز
-

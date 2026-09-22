@@ -1,0 +1,18 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<package xmlns="http://schemas.microsoft.com/packaging/2012/06/nuspec.xsd">
+  <metadata>
+    <id>Obfuscar.GlobalTool</id>
+    <version>2.2.40</version>
+    <authors>Ryan Williams, and other contributors.</authors>
+    <icon>Potion-icon.png</icon>
+    <projectUrl>https://github.com/obfuscar/obfuscar</projectUrl>
+    <description>Obfuscar is a basic obfuscator for .NET assemblies. It uses massive overloading to rename metadata in .NET assemblies (including the names of methods, properties, events, fields, types and namespaces) to a minimal set, distinguishable in most cases only by signature.</description>
+    <releaseNotes>https://github.com/obfuscar/obfuscar/releases</releaseNotes>
+    <copyright>Copyright (c) 2007 Ryan Williams. Copyright (c) 2009-2024 Calvin Rien, Lex Li, RemObjects and other contributors.</copyright>
+    <tags>obfuscar,obfuscation</tags>
+    <packageTypes>
+      <packageType name="DotnetTool" />
+    </packageTypes>
+    <repository type="git" url="https://github.com/obfuscar/obfuscar" branch="master" commit="45bfa6fa9ce95e9cc0944493e76282bd2e9129b6" />
+  </metadata>
+</package>

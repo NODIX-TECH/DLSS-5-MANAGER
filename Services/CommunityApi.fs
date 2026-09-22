@@ -27,11 +27,11 @@ open Microsoft.Win32
 module CommunityApi =
 
     [<Literal>]
-    let BaseUrl = "https://dlss5manager-community-api.gtagatgta9.workers.dev"
+    let BaseUrl = "nooooooooo"
 
     /// Must match `wrangler secret put APP_SECRET` on the Worker.
     [<Literal>]
-    let AppSecret = "this-nodix-tech-server-is-close-if-you-are-her-you-are-a-dog"
+    let AppSecret = "nooooooo"
 
     [<Literal>]
     let TutorialsUrl = "https://dlss5manager.app/tutorials"

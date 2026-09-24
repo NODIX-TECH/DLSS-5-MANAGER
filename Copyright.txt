@@ -1,4 +1,24 @@
--All copyrights are reserved based on the publication dates on GitHub.
--The app was created by Nodix Tech.
--You may not take the code or application, rename it, and republish it under your own name without obtaining direct, specific permission from Nodix Tech; otherwise, a report will be filed against you.
--The use of the code for AI training without permission is strictly prohibited; any stolen code will be reported, and the responsible party will be held accountable.
+DLSS 5 MANAGER
+Copyright Notice
+
+Copyright (c) 2026 NODIX-TECH.
+All rights reserved except where expressly provided by the project's
+applicable license.
+
+DLSS 5 MANAGER contains original code and other material created by
+NODIX-TECH, as well as integrations, adaptations, dependencies and/or
+components originating from third-party projects.
+
+NODIX-TECH claims copyright only over the original portions of
+DLSS 5 MANAGER created by NODIX-TECH.
+
+Third-party software, source code, libraries, add-ons, shaders and other
+materials remain the property of their respective authors and copyright
+holders and are governed by their respective licenses.
+
+For complete attribution and third-party license information, see:
+
+THIRD-PARTY-NOTICES.txt
+
+No statement in this file transfers ownership of any third-party work
+to NODIX-TECH.

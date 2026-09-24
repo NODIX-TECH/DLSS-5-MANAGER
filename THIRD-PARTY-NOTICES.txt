@@ -1,0 +1,292 @@
+DLSS 5 MANAGER
+THIRD-PARTY CREDITS, ATTRIBUTION & LICENSE NOTICE
+Last updated: 2026-09-24
+
+Copyright (c) 2026 NODIX-TECH
+Project: DLSS 5 MANAGER
+
+======================================================================
+PURPOSE OF THIS NOTICE
+======================================================================
+
+DLSS 5 MANAGER is developed by NODIX-TECH, but it exists within a wider
+community of open-source, source-available and independently distributed
+projects.
+
+NODIX-TECH claims copyright only over the original code, assets and other
+material created by NODIX-TECH.
+
+No ownership is claimed over third-party source code, binaries, libraries,
+shaders, add-ons, trademarks, project names or other material identified in
+this notice. Each third-party author or project retains all rights granted
+to them by copyright law and by the license that applies to their work.
+
+Where DLSS 5 MANAGER uses, adapts, interoperates with, downloads, references,
+or was inspired by a third-party project, the relationship is described
+below as clearly as possible.
+
+This file is an attribution and license-notice document. It does not replace,
+modify, expand or override any upstream license.
+
+======================================================================
+1. OPTISCALER
+======================================================================
+
+Project: OptiScaler
+Upstream project: https://github.com/OptiScaler/OptiScaler
+Original credit in DLSS 5 MANAGER: wilsjo2 / OptiScaler contributors
+Relationship: Third-party technology supported/integrated by DLSS 5 MANAGER.
+License: GPL-3.0 (see the upstream repository for the complete license).
+
+OptiScaler remains the property of its respective copyright holders and
+contributors. NODIX-TECH does not claim authorship or ownership of OptiScaler.
+
+======================================================================
+2. RENODX
+======================================================================
+
+Project: RenoDX
+Author / maintainer attribution: Carlos Lopez Jr. / clshortfuse and contributors
+Source: https://github.com/clshortfuse/renodx
+Relationship: Third-party technology and add-on ecosystem used/supported by
+DLSS 5 MANAGER.
+
+The main RenoDX repository is distributed under the MIT License:
+Copyright (c) 2025 Carlos Lopez Jr.
+
+Important: individual RenoDX-related experimental add-ons or separately
+distributed binaries may have licensing terms that differ from the main
+RenoDX repository. This notice does not assume that every RenoDX-related
+binary is covered by the MIT License.
+
+======================================================================
+3. DLSS5-FEEDER
+======================================================================
+
+Project: DLSS5-Feeder
+Author: Jean-Laurent ROUZIES
+Source: https://github.com/jlrouzies-fr/DLSS5-Feeder
+Relationship: Third-party DLSS 5 feeder technology used/supported by
+DLSS 5 MANAGER.
+License: MIT
+
+Upstream copyright notice:
+Copyright (c) 2026 Jean-Laurent ROUZIES
+
+The upstream license also notes that portions are derived from
+dlss5-dx11-bridge, Copyright (c) 2026 NIGos (MIT).
+
+NODIX-TECH does not claim authorship of DLSS5-Feeder or of upstream code
+contained in that project.
+
+======================================================================
+4. DEEP FRIED CHICKEN
+======================================================================
+
+Project: Deep Fried Chicken
+Author attribution: Alexander
+Component referenced by DLSS 5 MANAGER: deep-fried-chicken.addon64 and related
+Deep Fried Chicken components.
+Relationship: Independently distributed third-party DLSS 5 neural-rendering
+consumer supported by DLSS 5 MANAGER.
+
+Deep Fried Chicken remains the property of its author. No ownership or
+redistribution right is claimed by NODIX-TECH through this notice.
+
+Users and distributors should obtain the component from the author's official
+distribution source and follow the author's own license/redistribution terms.
+
+======================================================================
+5. LUMENITEFX
+======================================================================
+
+Project: LumeniteFX
+Author: Afzaal (Kaidō) / Umar Afzaal
+Source: https://github.com/umar-afzaal/LumeniteFX
+Relationship: Third-party ReShade shader / motion-vector technology referenced
+or supported by DLSS 5 MANAGER.
+License identified by the project: AGNYA License
+License source: https://github.com/nvb-uy/AGNYA-License
+
+LumeniteFX source files identify Afzaal as the copyright holder and state that
+the work is licensed under the AGNYA License.
+
+The AGNYA License places restrictions on public redistribution, modified
+redistribution, and use of parts of the project in another project without
+the required permission. Credit alone does not replace those requirements.
+
+NODIX-TECH does not claim ownership of LumeniteFX.
+
+======================================================================
+6. RENODX-MFGUNLOCK
+======================================================================
+
+Project / component: renodx-mfgunlock
+Author credit: Mateus Jorge
+Relationship: Third-party project/component credited by DLSS 5 MANAGER.
+
+NODIX-TECH does not claim authorship or ownership of renodx-mfgunlock.
+Its original license and distribution terms remain controlling.
+
+A verified upstream repository/license URL should be added here if/when the
+canonical public source is confirmed.
+
+======================================================================
+7. DLSS-NR ON AMD
+======================================================================
+
+Project: DLSS-NR on AMD
+Author: Daniel Blanco / danielblnc
+Source: https://github.com/danielblnc/DLSS-NR-on-AMD
+Relationship: Third-party AMD/RDNA3/RDNA4 DLSS Neural Rendering project
+referenced or supported by DLSS 5 MANAGER.
+
+Current upstream license:
+Copyright (c) 2026 Daniel Blanco. All rights reserved.
+
+The current upstream license permits personal, non-commercial use but states
+that redistribution, modification, reverse engineering and derivative works
+are restricted except where applicable law requires otherwise.
+
+This credit does NOT grant NODIX-TECH any redistribution right beyond what the
+upstream license permits.
+
+======================================================================
+8. DGVOODOO2
+======================================================================
+
+Project: dgVoodoo2
+Author: Dege
+Official project page: http://dege.freeweb.hu/dgVoodoo2/
+Relationship: Third-party compatibility technology used/referenced for legacy
+DirectX support, including DirectX 9 compatibility paths.
+
+dgVoodoo2 is a closed-source project. All rights to dgVoodoo2 belong to Dege.
+NODIX-TECH does not claim authorship or ownership of dgVoodoo2.
+
+======================================================================
+9. DLSS5-SWAPPER / RAKANKI911
+======================================================================
+
+Project: DLSS5-Swapper
+Author: Rakan Alkhaldi / rakanki911
+Source: https://github.com/rakanki911/DLSS5-Swapper
+License: MIT
+
+Relationship to DLSS 5 MANAGER:
+The overlay concept and community/chat feature were inspired in part by
+DLSS5-Swapper.
+
+This attribution records feature/concept inspiration. It does not, by itself,
+state that DLSS5-Swapper source code was copied into DLSS 5 MANAGER.
+
+Upstream copyright notice:
+Copyright (c) 2026 Rakan Alkhaldi
+
+======================================================================
+10. NEURALSCREEN / PERSEVAL-BLR
+======================================================================
+
+Project: NeuralScreen / DLSS5-NeuralScreen
+Author: perseval-BLR
+MIT-licensed source/version reference:
+https://github.com/perseval-BLR/DLSS5-NeuralScreen
+
+Relationship to DLSS 5 MANAGER:
+Portions of DLSS 5 MANAGER were adapted from a copy/version of NeuralScreen
+that was distributed under the MIT License at the time that version was
+obtained.
+
+NODIX-TECH explicitly acknowledges perseval-BLR as the original author of
+those upstream portions and does not claim authorship of code written by
+perseval-BLR.
+
+The relevant upstream MIT notice is preserved below.
+
+MIT License
+
+Copyright (c) 2026 perseval-BLR
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in all
+copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+SOFTWARE.
+
+This notice applies to the MIT-licensed NeuralScreen version/portions used by
+DLSS 5 MANAGER. It is not a statement that later NeuralScreen releases use the
+same license.
+
+======================================================================
+11. MIT LICENSE TEXT FOR OTHER MIT-LICENSED UPSTREAM WORKS
+======================================================================
+
+For third-party entries above identified as MIT-licensed, their copyright
+notices must be preserved together with the MIT permission notice when the
+license requires it.
+
+MIT License
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of the applicable software and associated documentation files (the "Software"),
+to deal in the Software without restriction, including without limitation the
+rights to use, copy, modify, merge, publish, distribute, sublicense, and/or
+sell copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The applicable copyright notice and this permission notice shall be included
+in all copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+SOFTWARE.
+
+======================================================================
+12. NVIDIA / DLSS NOTICE
+======================================================================
+
+NVIDIA, GeForce, RTX, DLSS and related names and marks are trademarks and/or
+property of NVIDIA Corporation.
+
+DLSS 5 MANAGER is an independent community project and is not affiliated with,
+sponsored by, endorsed by, or an official product of NVIDIA Corporation.
+
+Any NVIDIA runtime, SDK file or binary remains subject to its own applicable
+license and distribution terms. No NVIDIA-owned binary becomes open source or
+redistributable merely because it is referenced by DLSS 5 MANAGER or by an
+open-source third-party project.
+
+======================================================================
+FINAL ATTRIBUTION STATEMENT
+======================================================================
+
+DLSS 5 MANAGER benefits from the work, research, experimentation and ideas of
+many developers in the PC graphics/modding community.
+
+NODIX-TECH aims to credit upstream authors clearly and to preserve applicable
+copyright and license notices. If an upstream author believes an attribution,
+license reference, project name, URL or description in this file is inaccurate
+or incomplete, they are welcome to open an issue so the notice can be corrected.
+
+Nothing in this document transfers ownership of a third-party work to
+NODIX-TECH.
+
+NODIX-TECH retains copyright only in the original portions of DLSS 5 MANAGER
+created by NODIX-TECH, subject to the licenses and rights of all third-party
+components identified above.

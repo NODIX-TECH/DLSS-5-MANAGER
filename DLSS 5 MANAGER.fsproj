@@ -1,0 +1,153 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <OutputType>WinExe</OutputType>
+    <TargetFramework>net8.0</TargetFramework>
+    <ApplicationManifest>app.manifest</ApplicationManifest>
+    <ApplicationIcon>Assets\logo.ico</ApplicationIcon>
+    <AssemblyName>DLSS 5 MANAGER</AssemblyName>
+    <RootNamespace>DLSS_5_MANAGER</RootNamespace>
+
+    <!-- Authorship, rights & version stamped into the executable's file details. -->
+    <Product>DLSS 5 MANAGER</Product>
+    <AssemblyTitle>DLSS 5 MANAGER</AssemblyTitle>
+    <Company>NODIX TECH</Company>
+    <Authors>NODIX TECH</Authors>
+    <Description>DLSS 5 MANAGER — built by NODIX TECH.</Description>
+    <Copyright>© 2026 NODIX TECH. All rights reserved.</Copyright>
+    <Version>1.3.3</Version>
+    <AssemblyVersion>1.3.3.0</AssemblyVersion>
+    <FileVersion>1.3.3.0</FileVersion>
+    <InformationalVersion>1.3.3</InformationalVersion>
+
+    <!-- ================================================================= -->
+    <!-- RUNTIME FOOTPRINT                                                  -->
+    <!-- A desktop tool that sits idle most of the time, so the runtime is  -->
+    <!-- tuned for a small resident set rather than for throughput.         -->
+    <!-- ================================================================= -->
+    <!-- Workstation GC: one heap instead of one per core. Server GC would
+         reserve hundreds of megabytes on a modern CPU for no benefit here. -->
+    <ServerGarbageCollection>false</ServerGarbageCollection>
+    <!-- No background GC thread and no extra heap headroom held for it. -->
+    <ConcurrentGarbageCollection>false</ConcurrentGarbageCollection>
+    <!-- Hand freed segments back to Windows instead of keeping them mapped,
+         which is what keeps the number in Task Manager high after a scan. -->
+    <RetainVMGarbageCollection>false</RetainVMGarbageCollection>
+    <!-- Re-JIT the paths that actually run hot; the rest stays at tier 0. -->
+    <TieredPGO>true</TieredPGO>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <AvaloniaResource Include="Assets\**" />
+    <!-- The payload the installer deploys; must sit next to the built executable. -->
+    <Content Include="mod files\**" Exclude="mod files\**\__pycache__\**;mod files\**\*.pyc" CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="PreserveNewest" />
+    <!-- UI translations, read at runtime. -->
+    <Content Include="languages\**" CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="PreserveNewest" />
+    <!-- The window backgrounds, one per colour atmosphere, and the small copies
+         the Settings picker shows. Read from disk rather than embedded, so the
+         assembly stays small and only the picture on screen is ever decoded. -->
+    <Content Include="backgrounds\**" CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="PreserveNewest" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Compile Include="Models\GameItem.fs" />
+    <Compile Include="Services\Localization.fs" />
+    <Compile Include="Services\ExtrasStore.fs" />
+    <Compile Include="Services\GameAnalyzer.fs" />
+    <Compile Include="Services\AntiCheat.fs" />
+    <Compile Include="Services\IconExtractor.fs" />
+    <Compile Include="Services\SteamCovers.fs" />
+    <Compile Include="Services\GameScanner.fs" />
+    <Compile Include="Services\EmulatorCatalog.fs" />
+    <!-- Ahead of ModInstaller: the OptiScaler route picks its payload folder
+         from the card this machine has, which SystemSpecs is what reads. -->
+    <Compile Include="Services\SystemSpecs.fs" />
+    <Compile Include="Services\ModInstaller.fs" />
+    <Compile Include="Services\AnalysisStore.fs" />
+    <Compile Include="Services\UpdateChecker.fs" />
+    <!-- After UpdateChecker and ModInstaller: it uses the version string
+         from one and the "mod files" root from the other. -->
+    <Compile Include="Services\CloudAssets.fs" />
+    <Compile Include="Services\CommunityApi.fs" />
+    <Compile Include="Services\ChatImages.fs" />
+    <Compile Include="Services\UiSounds.fs" />
+    <Compile Include="Services\BackgroundStore.fs" />
+    <Compile Include="Services\ScreenDesktop.fs" />
+    <Compile Include="ViewModels\ViewModelBase.fs" />
+    <Compile Include="ViewModels\SetupViewModel.fs" />
+    <Compile Include="ViewModels\ScreenViewModel.fs" />
+    <Compile Include="ViewModels\GameCardViewModel.fs" />
+    <Compile Include="ViewModels\CommunityViewModel.fs" />
+    <Compile Include="ViewModels\ChatViewModel.fs" />
+    <Compile Include="ViewModels\GalleryViewModel.fs" />
+    <Compile Include="ViewModels\DmViewModel.fs" />
+    <Compile Include="ViewModels\MainViewModel.fs" />
+    <Compile Include="Views\ScreenView.axaml.fs" />
+    <Compile Include="Views\MainWindow.axaml.fs" />
+    <Compile Include="ViewLocator.fs" />
+    <Compile Include="App.axaml.fs" />
+    <Compile Include="Program.fs" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Avalonia" Version="12.1.0" />
+    <PackageReference Include="Avalonia.Desktop" Version="12.1.0" />
+    <PackageReference Include="Avalonia.Themes.Fluent" Version="12.1.0" />
+    <PackageReference Include="Avalonia.Fonts.Inter" Version="12.1.0" />
+    <PackageReference Include="AvaloniaUI.DiagnosticsSupport" Version="2.2.3">
+      <IncludeAssets Condition="'$(Configuration)' != 'Debug'">None</IncludeAssets>
+      <PrivateAssets Condition="'$(Configuration)' != 'Debug'">All</PrivateAssets>
+    </PackageReference>
+    <PackageReference Include="CommunityToolkit.Mvvm" Version="8.4.2" />
+    <PackageReference Include="Microsoft.Win32.Registry" Version="5.0.0" />
+    <PackageReference Include="System.Drawing.Common" Version="8.0.0" />
+  </ItemGroup>
+
+  <!-- ================================================================= -->
+  <!-- SOURCE PROTECTION                                                  -->
+  <!-- Release builds are run through Obfuscar to rename the internal /   -->
+  <!-- private surface (fields, methods, closures, helper types) so the   -->
+  <!-- shipped assembly is hostile to decompilation. The public API is    -->
+  <!-- kept intact because Avalonia XAML, ViewLocator and JSON resolve    -->
+  <!-- those names at runtime (see Obfuscar.xml). Debug builds are never   -->
+  <!-- touched, so day-to-day development and debugging stay clean.       -->
+  <!-- ================================================================= -->
+  <!--
+    Runs after every Release build. Because the Publish target depends on Build,
+    this fires before the publish pipeline copies files out, so the published
+    (and self-contained / any-RID) assembly is obfuscated too. $(TargetDir) is
+    RID-aware, so win-x86 / win-x64 output folders are handled automatically.
+  -->
+  <Target Name="ObfuscateRelease" AfterTargets="Build" Condition="'$(Configuration)' == 'Release'">
+    <Exec Command="powershell -NoProfile -ExecutionPolicy Bypass -File &quot;$(MSBuildProjectDirectory)\obfuscate.ps1&quot; -Dir &quot;$(TargetDir.TrimEnd('\'))&quot; -Tool &quot;$(MSBuildProjectDirectory)\.obfuscar-tool\obfuscar.console.exe&quot;" />
+  </Target>
+
+  <!--
+    Publish copies the primary assembly straight from obj\, bypassing the
+    build-output copy above, so obfuscate the final published assembly too.
+    This is the one that actually ships.
+  -->
+  <Target Name="ObfuscatePublish" AfterTargets="Publish">
+    <PropertyGroup>
+      <_ObfPublishDir>$([System.IO.Path]::GetFullPath('$(PublishDir)').TrimEnd('\'))</_ObfPublishDir>
+    </PropertyGroup>
+    <Exec Command="powershell -NoProfile -ExecutionPolicy Bypass -File &quot;$(MSBuildProjectDirectory)\obfuscate.ps1&quot; -Dir &quot;$(_ObfPublishDir)&quot; -Tool &quot;$(MSBuildProjectDirectory)\.obfuscar-tool\obfuscar.console.exe&quot;" />
+  </Target>
+
+  <!-- ================================================================= -->
+  <!-- SETUP                                                              -->
+  <!-- Every Release publish produces two things: the folder of files it  -->
+  <!-- always has (E:\DLSS 5 MANAGER), and the setup                      -->
+  <!-- "DLSS.5.MANAGER.<version>.exe" in E:\DLSS 5 MANAGER EXE, compiled   -->
+  <!-- from that same folder (once obfuscated) with Inno Setup 6. An Inno  -->
+  <!-- stub is recognised by antivirus, so it is small AND not flagged,    -->
+  <!-- unlike a custom self-extracting exe. The folder is not changed.     -->
+  <!-- -p:SkipInstaller=true publishes the folder alone.                   -->
+  <!-- ================================================================= -->
+  <Target Name="BuildInstaller" AfterTargets="ObfuscatePublish"
+          Condition="'$(Configuration)' == 'Release' And '$(RuntimeIdentifier)' == 'win-x64' And '$(SkipInstaller)' != 'true' And Exists('$(MSBuildProjectDirectory)\..\Installer\build-installer.ps1')">
+    <PropertyGroup>
+      <_InstallerPublishDir>$([System.IO.Path]::GetFullPath('$(PublishDir)').TrimEnd('\'))</_InstallerPublishDir>
+    </PropertyGroup>
+    <Exec Command="powershell -NoProfile -ExecutionPolicy Bypass -File &quot;$(MSBuildProjectDirectory)\..\Installer\build-installer.ps1&quot; -PublishDir &quot;$(_InstallerPublishDir)&quot; -Version &quot;$(Version)&quot; -OutDir &quot;E:\DLSS 5 MANAGER EXE&quot;" />
+  </Target>
+</Project>

@@ -1,0 +1,499 @@
+﻿<UserControl xmlns="https://github.com/avaloniaui" xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml" x:Class="DLSS_5_MANAGER.Views.ScreenView" x:DataType="vm:ScreenViewModel" HorizontalContentAlignment="Stretch" VerticalContentAlignment="Stretch" ClipToBounds="True" xmlns:vm="using:DLSS_5_MANAGER.ViewModels">
+  <UserControl.Resources>
+    <!-- The bars use PillSlider from App.axaml, shared with Settings. -->
+  </UserControl.Resources>
+  <UserControl.Styles>
+    <!-- Darker over a bright background picture - see GlareScreenCardBrush in App.axaml. -->
+    <Style Selector="Border.ScreenCard">
+      <Setter Property="Background" Value="{DynamicResource GlareScreenCardBrush}" />
+      <Setter Property="BorderBrush" Value="#25FFFFFF" />
+      <Setter Property="BorderThickness" Value="1" />
+      <Setter Property="CornerRadius" Value="18" />
+      <Setter Property="Padding" Value="22" />
+    </Style>
+    <Style Selector="TextBlock.SectionTitle">
+      <Setter Property="FontSize" Value="11" />
+      <Setter Property="FontWeight" Value="SemiBold" />
+      <Setter Property="Foreground" Value="#94A3B8" />
+      <Setter Property="LetterSpacing" Value="2" />
+    </Style>
+    <Style Selector="ComboBox">
+      <Setter Property="HorizontalAlignment" Value="Stretch" />
+    </Style>
+    <Style Selector="ToggleSwitch">
+      <Setter Property="HorizontalAlignment" Value="Stretch" />
+    </Style>
+
+    <!-- The small panels that open from the shortcut and guide buttons. The
+         popup's own chrome is cleared so only the app's panel shows. -->
+    <Style Selector="FlyoutPresenter">
+      <Setter Property="Background" Value="Transparent" />
+      <Setter Property="BorderThickness" Value="0" />
+      <Setter Property="Padding" Value="0" />
+      <Setter Property="CornerRadius" Value="16" />
+    </Style>
+    <Style Selector="Border.ShortcutPanel">
+      <Setter Property="Background" Value="#F70B1214" />
+      <Setter Property="BorderBrush" Value="#2EFFFFFF" />
+      <Setter Property="BorderThickness" Value="1" />
+      <Setter Property="CornerRadius" Value="16" />
+      <Setter Property="Padding" Value="16" />
+    </Style>
+    <!-- The key cap: the shortcut as it is now, big enough to read at a glance. -->
+    <Style Selector="Button.ShortcutCap">
+      <Setter Property="Background" Value="#14FFFFFF" />
+      <Setter Property="BorderBrush" Value="#33FFFFFF" />
+      <Setter Property="BorderThickness" Value="1" />
+      <Setter Property="CornerRadius" Value="12" />
+      <Setter Property="Padding" Value="12,11" />
+      <Setter Property="FontSize" Value="15" />
+      <Setter Property="FontWeight" Value="Bold" />
+      <Setter Property="Foreground" Value="#E2E8F0" />
+      <Setter Property="Cursor" Value="Hand" />
+    </Style>
+
+  </UserControl.Styles>
+  <ScrollViewer x:Name="ScreenScrollViewer" VerticalScrollBarVisibility="Visible" HorizontalScrollBarVisibility="Disabled">
+    <Border x:Name="ScreenRoot" Padding="28,14,28,90">
+      <StackPanel Spacing="12" MaxWidth="1040">
+        <!-- The header sits on the picture: the plate behind it only shows while
+             the picture is bright (GlareBackingBrush). Margin and padding add up
+             to the old margin, so nothing moves over a dark picture. The name is
+             on the plate so the overlay, which hides the header, hides both. -->
+        <Border x:Name="ScreenHeader" Margin="-6,-2,-6,2" Padding="10,6" CornerRadius="16"
+                Background="{DynamicResource GlareBackingBrush}">
+        <Grid ColumnDefinitions="*,Auto">
+          <StackPanel Orientation="Horizontal" Spacing="12" VerticalAlignment="Center">
+            <TextBlock Text="LIVE FLOW" FontSize="24" FontWeight="Bold" LetterSpacing="2" VerticalAlignment="Center" />
+            <!-- The card that does the work, beside the name of the section
+                 doing it - rather than tucked under the status on the far
+                 side, where it read as a footnote to the Overlay button. -->
+            <Border Background="#12FFFFFF" BorderBrush="#1FFFFFFF" BorderThickness="1" CornerRadius="9"
+                    Padding="9,3" VerticalAlignment="Center">
+              <TextBlock Text="{Binding GpuText}" FontSize="11" Foreground="#94A3B8" />
+            </Border>
+          </StackPanel>
+          <StackPanel Grid.Column="1" Spacing="3" VerticalAlignment="Center">
+            <StackPanel Orientation="Horizontal" Spacing="8" HorizontalAlignment="Right">
+              <Ellipse Width="16" Height="16" Stroke="#76B900" StrokeThickness="2" StrokeDashArray="2.6,1.6" StrokeLineCap="Round" IsVisible="{Binding IsPreparing}" RenderTransformOrigin="50%,50%">
+                <Ellipse.Styles><Style Selector="Ellipse"><Style.Animations><Animation Duration="0:0:1.1" IterationCount="Infinite"><KeyFrame Cue="0%"><Setter Property="RotateTransform.Angle" Value="0" /></KeyFrame><KeyFrame Cue="100%"><Setter Property="RotateTransform.Angle" Value="360" /></KeyFrame></Animation></Style.Animations></Style></Ellipse.Styles>
+              </Ellipse>
+              <TextBlock Text="{Binding Status}" Foreground="#CBD5E1" VerticalAlignment="Center" />
+              <!-- The way out of the ready state, and the way back in - the
+                   same place, one of them showing at a time. Without the
+                   second one, leaving meant leaving the section and coming
+                   back to start it again. -->
+              <Button Classes="AppleSecondaryBtn" Content="{Binding Loc.LfStop}" Command="{Binding StopCommand}"
+                      IsVisible="{Binding CanStop}" Focusable="False" ToolTip.Tip="{Binding Loc.LfStopHint}" />
+              <Button Classes="ApplePrimaryBtn" Content="{Binding Loc.LfStart}" Command="{Binding StartCommand}"
+                      IsVisible="{Binding CanStart}" Focusable="False" ToolTip.Tip="{Binding Loc.LfStartHint}" />
+              <!-- Each shortcut is its own button with its key on its face.
+                   Clicking one opens a small panel to change that key - typed
+                   in, or picked from a few that are known to be free. -->
+              <Button Classes="AppleSecondaryBtn" Content="{Binding OverlayButtonText}">
+                <Button.Flyout>
+                  <Flyout Placement="BottomEdgeAlignedRight">
+                    <!-- Keys land here while the cap below is listening. -->
+                    <Border Classes="ShortcutPanel" KeyDown="OnHotkeyPanelKeyDown">
+                      <StackPanel Spacing="10" Width="300">
+                        <TextBlock Text="{Binding Loc.LfShortcutOverlay}" FontWeight="Bold" FontSize="13.5" />
+                        <TextBlock Text="{Binding Loc.LfShortcutHintOverlay}" FontSize="11" Foreground="#94A3B8" TextWrapping="Wrap" />
+                        <Button Classes="ShortcutCap" Tag="overlay" Click="OnCaptureHotkey" Content="{Binding OverlayCapText}"
+                                HorizontalAlignment="Stretch" HorizontalContentAlignment="Center" />
+                        <TextBlock Text="{Binding Loc.LfShortcutChange}" FontSize="10.5" Foreground="#64748B" TextWrapping="Wrap" />
+                        <TextBlock Text="{Binding Loc.LfShortcutPresets}" FontSize="10.5" FontWeight="Bold" Foreground="#94A3B8" />
+                        <WrapPanel>
+                          <Button Classes="SegmentedTab" Tag="overlay|4|79" Click="OnHotkeyPreset" Content="Shift+O" Padding="11,5" Margin="0,0,6,6" />
+                          <Button Classes="SegmentedTab" Tag="overlay|1|79" Click="OnHotkeyPreset" Content="Alt+O" Padding="11,5" Margin="0,0,6,6" />
+                          <Button Classes="SegmentedTab" Tag="overlay|6|79" Click="OnHotkeyPreset" Content="Ctrl+Shift+O" Padding="11,5" Margin="0,0,6,6" />
+                          <Button Classes="SegmentedTab" Tag="overlay|0|118" Click="OnHotkeyPreset" Content="F7" Padding="11,5" Margin="0,0,6,6" />
+                          <Button Classes="SegmentedTab" Tag="overlay|0|119" Click="OnHotkeyPreset" Content="F8" Padding="11,5" Margin="0,0,6,6" />
+                        </WrapPanel>
+                        <Button Classes="ApplePrimaryBtn" Content="{Binding Loc.LfOpenOverlayNow}" Click="OnOpenOverlay"
+                                HorizontalAlignment="Stretch" HorizontalContentAlignment="Center" />
+                      </StackPanel>
+                    </Border>
+                  </Flyout>
+                </Button.Flyout>
+              </Button>
+              <Button Classes="AppleSecondaryBtn" Content="{Binding DlssButtonText}">
+                <Button.Flyout>
+                  <Flyout Placement="BottomEdgeAlignedRight">
+                    <!-- Keys land here while the cap below is listening. -->
+                    <Border Classes="ShortcutPanel" KeyDown="OnHotkeyPanelKeyDown">
+                      <StackPanel Spacing="10" Width="300">
+                        <TextBlock Text="{Binding Loc.LfShortcutDlss}" FontWeight="Bold" FontSize="13.5" />
+                        <TextBlock Text="{Binding Loc.LfShortcutHintDlss}" FontSize="11" Foreground="#94A3B8" TextWrapping="Wrap" />
+                        <Button Classes="ShortcutCap" Tag="dlss" Click="OnCaptureHotkey" Content="{Binding DlssCapText}"
+                                HorizontalAlignment="Stretch" HorizontalContentAlignment="Center" />
+                        <TextBlock Text="{Binding Loc.LfShortcutChange}" FontSize="10.5" Foreground="#64748B" TextWrapping="Wrap" />
+                        <TextBlock Text="{Binding Loc.LfShortcutPresets}" FontSize="10.5" FontWeight="Bold" Foreground="#94A3B8" />
+                        <WrapPanel>
+                          <Button Classes="SegmentedTab" Tag="dlss|0|117" Click="OnHotkeyPreset" Content="F6" Padding="11,5" Margin="0,0,6,6" />
+                          <Button Classes="SegmentedTab" Tag="dlss|0|120" Click="OnHotkeyPreset" Content="F9" Padding="11,5" Margin="0,0,6,6" />
+                          <Button Classes="SegmentedTab" Tag="dlss|4|117" Click="OnHotkeyPreset" Content="Shift+F6" Padding="11,5" Margin="0,0,6,6" />
+                          <Button Classes="SegmentedTab" Tag="dlss|1|68" Click="OnHotkeyPreset" Content="Alt+D" Padding="11,5" Margin="0,0,6,6" />
+                          <Button Classes="SegmentedTab" Tag="dlss|6|68" Click="OnHotkeyPreset" Content="Ctrl+Shift+D" Padding="11,5" Margin="0,0,6,6" />
+                        </WrapPanel>
+                      </StackPanel>
+                    </Border>
+                  </Flyout>
+                </Button.Flyout>
+              </Button>
+              <!-- The FPS counter at the top of the output screen: the base
+                   frames, and with FLOW MFG / DLSS 4.5 FG the frames after it.
+                   The overlay's header carries the same button. -->
+              <Button Classes="AppleSecondaryBtn" Click="OnToggleFpsCounter" Focusable="False"
+                      ToolTip.Tip="{Binding Loc.LfFpsHint}">
+                <StackPanel Orientation="Horizontal" Spacing="7">
+                  <Ellipse Width="7" Height="7" Fill="#34D399" VerticalAlignment="Center"
+                           IsVisible="{Binding IsFpsCounterOn}" />
+                  <TextBlock Text="{Binding FpsButtonText}" VerticalAlignment="Center" />
+                </StackPanel>
+              </Button>
+            </StackPanel>
+          </StackPanel>
+        </Grid>
+        </Border>
+        <TextBlock Text="{Binding Error}" IsVisible="{Binding HasError}" Foreground="#FF9C8A" TextWrapping="Wrap" />
+        <TextBlock x:Name="NoResults" Text="No Screen options match your search." IsVisible="{Binding NoSearchResults}" Foreground="#94A3B8" />
+        <Border x:Name="AmdNotice" Classes="ScreenCard" IsVisible="{Binding IsAmdBlocked}">
+          <StackPanel Spacing="10">
+            <StackPanel Orientation="Horizontal" Spacing="10">
+              <Border Background="#26F59E0B" BorderBrush="#55F59E0B" BorderThickness="1" CornerRadius="6" Padding="7,2" VerticalAlignment="Center">
+                <TextBlock Text="AMD MODE" FontSize="10" FontWeight="Bold" Foreground="#FCD34D" LetterSpacing="0.6" />
+              </Border>
+              <TextBlock Text="LIVE FLOW for AMD Radeon is coming soon" FontSize="17" FontWeight="SemiBold" VerticalAlignment="Center" TextWrapping="Wrap" />
+            </StackPanel>
+            <TextBlock TextWrapping="Wrap" Foreground="#CBD5E1" LineHeight="20"
+                       Text="Work on LIVE FLOW for AMD RDNA 3 and RDNA 4 cards will start soon. We're sorry - we don't have one of these cards to test on yet, which makes this very hard. Turn AMD MODE off in Settings to use LIVE FLOW on an NVIDIA card." />
+          </StackPanel>
+        </Border>
+        <Border x:Name="ProcessingCard" Classes="ScreenCard" IsVisible="{Binding ShowProcessing}" IsEnabled="{Binding IsReady}">
+          <StackPanel Spacing="8">
+            <TextBlock Classes="SectionTitle" Text="{Binding Loc.LfProcessing}" />
+            <Grid ColumnDefinitions="*,*" ColumnSpacing="20" RowSpacing="10" RowDefinitions="Auto,Auto,Auto,Auto">
+              <Grid ColumnDefinitions="*,Auto" Grid.Column="0" Grid.Row="0">
+                <TextBlock Text="{Binding Loc.LfDlss5}" VerticalAlignment="Center" />
+                <Border Grid.Column="1" CornerRadius="19" Padding="3" Background="#0C1014" BorderBrush="#20FFFFFF" BorderThickness="1" Width="136" Height="38" VerticalAlignment="Center">
+                  <UniformGrid Columns="2">
+                    <Button Classes="SegmentedTab" Classes.Active="{Binding !Nr}" Content="{Binding Loc.LfOff}" Command="{Binding NrOffCommand}" Padding="8,6" HorizontalAlignment="Stretch" HorizontalContentAlignment="Center" />
+                    <Button Classes="SegmentedTab" Classes.Active="{Binding Nr}" Content="{Binding Loc.LfOn}" Command="{Binding NrOnCommand}" Padding="8,6" HorizontalAlignment="Stretch" HorizontalContentAlignment="Center" />
+                  </UniformGrid>
+                </Border>
+              </Grid>
+              <!-- The multiplier belongs beside the switch it multiplies, not
+                   underneath it: one line, level with DLSS 5 on the left. -->
+              <!-- Greyed out while FLOW MFG is on, rather than quietly turning
+                   it off: two frame generators cannot own the frames between
+                   the network's, and a switch that undoes another switch
+                   somewhere else is how a person loses track of what is on. -->
+              <Grid ColumnDefinitions="*,Auto,Auto" ColumnSpacing="8" Grid.Column="1" Grid.Row="0"
+                    IsEnabled="{Binding !FlowMfg}" ToolTip.Tip="{Binding Loc.LfFgBlockedHint}">
+                <TextBlock Text="{Binding Loc.LfDlss45Fg}" VerticalAlignment="Center" />
+                <Border Grid.Column="1" CornerRadius="19" Padding="3" Background="#0C1014" BorderBrush="#20FFFFFF" BorderThickness="1" Width="136" Height="38" VerticalAlignment="Center">
+                  <UniformGrid Columns="2">
+                    <Button Classes="SegmentedTab" Focusable="False" Classes.Active="{Binding !FrameGeneration}" Content="{Binding Loc.LfOff}" Command="{Binding FrameGenerationOffCommand}" Padding="8,6" HorizontalAlignment="Stretch" HorizontalContentAlignment="Center" />
+                    <Button Classes="SegmentedTab" Focusable="False" Classes.Active="{Binding FrameGeneration}" Content="{Binding Loc.LfOn}" Command="{Binding FrameGenerationOnCommand}" Padding="8,6" HorizontalAlignment="Stretch" HorizontalContentAlignment="Center" />
+                  </UniformGrid>
+                </Border>
+                <ComboBox Classes="GlassComboBox" Grid.Column="2" Width="80" MinWidth="80" HorizontalAlignment="Right" VerticalAlignment="Center" ItemsSource="{Binding Multipliers}" SelectedIndex="{Binding MultiplierIndex, Mode=TwoWay}" />
+              </Grid>
+              <Grid ColumnDefinitions="*,Auto" Grid.Column="0" Grid.Row="1">
+                <TextBlock Text="{Binding Loc.LfEnhance}" VerticalAlignment="Center" />
+                <Border Grid.Column="1" CornerRadius="19" Padding="3" Background="#0C1014" BorderBrush="#20FFFFFF" BorderThickness="1" Width="136" Height="38" VerticalAlignment="Center">
+                  <UniformGrid Columns="2">
+                    <Button Classes="SegmentedTab" Classes.Active="{Binding !Boost}" Content="{Binding Loc.LfOff}" Command="{Binding BoostOffCommand}" Padding="8,6" HorizontalAlignment="Stretch" HorizontalContentAlignment="Center" />
+                    <Button Classes="SegmentedTab" Classes.Active="{Binding Boost}" Content="{Binding Loc.LfOn}" Command="{Binding BoostOnCommand}" Padding="8,6" HorizontalAlignment="Stretch" HorizontalContentAlignment="Center" />
+                  </UniformGrid>
+                </Border>
+              </Grid>
+              <!-- FLOW MFG: our own frame multiplication. Directly under DLSS
+                   4.5 FG, built from the same pieces in the same widths, so
+                   the two ways of multiplying frames read as one pair and
+                   neither line reaches past the other. -->
+              <Grid ColumnDefinitions="*,Auto,Auto" ColumnSpacing="8" Grid.Column="1" Grid.Row="1" ToolTip.Tip="{Binding Loc.LfFlowMfgHint}">
+                <!-- Beta on its face: it is ours, it is new, and it is the one
+                     thing here that is still being shaped. -->
+                <Grid ColumnDefinitions="*,Auto" ColumnSpacing="6" VerticalAlignment="Center" HorizontalAlignment="Left">
+                  <TextBlock Text="{Binding Loc.LfFlowMfg}" VerticalAlignment="Center" TextTrimming="CharacterEllipsis" />
+                  <Border Grid.Column="1" Background="#26F59E0B" BorderBrush="#55F59E0B" BorderThickness="1" CornerRadius="6" Padding="5,0" VerticalAlignment="Center">
+                    <TextBlock Text="BETA" FontSize="8.5" FontWeight="Bold" Foreground="#FCD34D" LetterSpacing="0.5" />
+                  </Border>
+                </Grid>
+                <Border Grid.Column="1" CornerRadius="19" Padding="3" Background="#0C1014" BorderBrush="#20FFFFFF" BorderThickness="1" Width="136" Height="38" VerticalAlignment="Center">
+                  <UniformGrid Columns="2">
+                    <Button Classes="SegmentedTab" Focusable="False" Classes.Active="{Binding !FlowMfg}" Content="{Binding Loc.LfOff}" Command="{Binding FlowMfgOffCommand}" Padding="8,6" HorizontalAlignment="Stretch" HorizontalContentAlignment="Center" />
+                    <Button Classes="SegmentedTab" Focusable="False" Classes.Active="{Binding FlowMfg}" Content="{Binding Loc.LfOn}" Command="{Binding FlowMfgOnCommand}" Padding="8,6" HorizontalAlignment="Stretch" HorizontalContentAlignment="Center" />
+                  </UniformGrid>
+                </Border>
+                <ComboBox Classes="GlassComboBox" Grid.Column="2" Width="80" MinWidth="80" HorizontalAlignment="Right" VerticalAlignment="Center" ItemsSource="{Binding FlowMultipliers}" SelectedIndex="{Binding FlowMultiplierIndex, Mode=TwoWay}" />
+              </Grid>
+              <!-- The four sliders, compact: label, bar, value on one line, and
+                   every value in the same 48 wide box so the bars start and
+                   stop at the same place down both columns. -->
+              <!-- The four sliders: the label carries its own value, then the
+                   bar. One shape for all of them, so the two columns line up
+                   two by two and no number ever sits next to another slider's
+                   name. The label column is fixed, which is what makes the
+                   bars start and finish at the same place down both sides. -->
+              <Grid ColumnDefinitions="168,*" ColumnSpacing="12" Grid.Column="0" Grid.Row="2" VerticalAlignment="Center">
+                <TextBlock Text="{Binding PassCountLabel}" VerticalAlignment="Center" TextTrimming="CharacterEllipsis"
+                           ToolTip.Tip="{Binding Loc.LfMultiPass}" />
+                <Slider Grid.Column="1" Theme="{StaticResource PillSlider}" Minimum="1" Maximum="6" TickFrequency="1" IsSnapToTickEnabled="True" Value="{Binding PassCount, Mode=TwoWay}" />
+              </Grid>
+              <Grid ColumnDefinitions="168,*" ColumnSpacing="12" Grid.Column="1" Grid.Row="2" VerticalAlignment="Center" ToolTip.Tip="{Binding Loc.LfHaloHint}">
+                <TextBlock Text="{Binding HaloLabel}" VerticalAlignment="Center" TextTrimming="CharacterEllipsis" />
+                <Slider Grid.Column="1" Theme="{StaticResource PillSlider}" Minimum="0" Maximum="1" TickFrequency="0.05" IsSnapToTickEnabled="True" Value="{Binding HaloReduction, Mode=TwoWay}" />
+              </Grid>
+              <Grid ColumnDefinitions="168,*" ColumnSpacing="12" Grid.Column="0" Grid.Row="3" VerticalAlignment="Center" ToolTip.Tip="{Binding Loc.LfSharpnessHint}">
+                <TextBlock Text="{Binding SharpnessLabel}" VerticalAlignment="Center" TextTrimming="CharacterEllipsis" />
+                <Slider Grid.Column="1" Theme="{StaticResource PillSlider}" Minimum="0" Maximum="1" TickFrequency="0.05" IsSnapToTickEnabled="True" Value="{Binding Sharpness, Mode=TwoWay}" />
+              </Grid>
+              <Grid ColumnDefinitions="168,*" ColumnSpacing="12" Grid.Column="1" Grid.Row="3" VerticalAlignment="Center" ToolTip.Tip="{Binding Loc.LfEdgeSmoothingHint}">
+                <TextBlock Text="{Binding EdgeSmoothingLabel}" VerticalAlignment="Center" TextTrimming="CharacterEllipsis" />
+                <Slider Grid.Column="1" Theme="{StaticResource PillSlider}" Minimum="0" Maximum="1" TickFrequency="0.05" IsSnapToTickEnabled="True" Value="{Binding EdgeSmoothing, Mode=TwoWay}" />
+              </Grid>
+            </Grid>
+            <TextBlock Text="{Binding FgInfo}" IsVisible="{Binding HasFgInfo}" FontSize="12" Foreground="#94A3B8" TextWrapping="Wrap" />
+            <TextBlock Text="{Binding StepDownInfo}" IsVisible="{Binding HasStepDown}" FontSize="12" Foreground="#F59E0B" TextWrapping="Wrap" />
+            <StackPanel Spacing="8">
+              <Grid ColumnDefinitions="*,Auto">
+                <TextBlock Text="{Binding Loc.LfNetworkResolution}" />
+                <TextBlock Grid.Column="1" Text="{Binding WorkSize}" Foreground="#94A3B8" />
+              </Grid>
+              <Slider Theme="{StaticResource PillSlider}" Minimum="0.1" Maximum="{Binding ScaleCap}" Value="{Binding WorkScale, Mode=TwoWay}" TickFrequency="0.05" IsSnapToTickEnabled="True" IsEnabled="{Binding Boost}" />
+              <!-- Centred under the slider they set, rather than pushed into
+                   the corner beside a label that explained nothing. -->
+              <StackPanel Orientation="Horizontal" Spacing="7" HorizontalAlignment="Center">
+                <Button Classes="SegmentedTab" Content="{Binding Loc.LfFast}" Command="{Binding FastResolutionCommand}" Padding="15,4" />
+                <Button Classes="SegmentedTab" Content="{Binding Loc.LfBalanced}" Command="{Binding BalancedResolutionCommand}" Padding="15,4" />
+                <Button Classes="SegmentedTab" Content="{Binding Loc.LfQuality}" Command="{Binding QualityResolutionCommand}" Padding="15,4" />
+              </StackPanel>
+            </StackPanel>
+          </StackPanel>
+        </Border>
+        <Border x:Name="SourceCard" Classes="ScreenCard" IsVisible="{Binding ShowSource}" IsEnabled="{Binding IsReady}">
+          <StackPanel Spacing="8">
+            <Grid ColumnDefinitions="*,Auto,Auto" ColumnSpacing="6">
+              <TextBlock Classes="SectionTitle" Text="{Binding Loc.LfSource}" VerticalAlignment="Center" />
+              <Button Grid.Column="1" Classes="SegmentedTab" Content="{Binding Loc.LfRefresh}" Command="{Binding RefreshSourcesCommand}" Padding="10,4" />
+              <Button Grid.Column="2" Classes="SegmentedTab" Content="{Binding Loc.LfReconnect}" Command="{Binding RetrySourceCommand}" Padding="10,4" />
+            </Grid>
+            <Grid ColumnDefinitions="*,Auto" ColumnSpacing="10">
+              <ComboBox Classes="GlassComboBox" ItemsSource="{Binding Windows}" SelectedItem="{Binding Window, Mode=TwoWay}" PlaceholderText="{Binding Loc.LfSelectAWindow}" MaxDropDownHeight="300" />
+              <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="6">
+                <Button Classes="AppleSecondaryBtn" Content="{Binding Loc.LfGoToApp}" Command="{Binding FocusSourceCommand}" IsEnabled="{Binding IsWindowMode}" />
+              </StackPanel>
+            </Grid>
+          </StackPanel>
+        </Border>
+        <Border x:Name="EffectCard" Classes="ScreenCard" IsVisible="{Binding ShowEffect}" IsEnabled="{Binding IsReady}">
+          <StackPanel Spacing="8">
+            <TextBlock Classes="SectionTitle" Text="{Binding Loc.LfEffect}" />
+            <Grid ColumnDefinitions="*,*" ColumnSpacing="20" RowSpacing="10" RowDefinitions="Auto,Auto,Auto">
+              <StackPanel Spacing="8" Grid.Column="0" Grid.Row="0">
+                <TextBlock Text="{Binding Loc.LfProfile}" />
+                <ComboBox Classes="GlassComboBox" ItemsSource="{Binding Profiles}" SelectedItem="{Binding Profile, Mode=TwoWay}" />
+              </StackPanel>
+              <StackPanel Spacing="8" Grid.Column="1" Grid.Row="0">
+                <TextBlock Text="{Binding Loc.LfModel}" />
+                <ComboBox Classes="GlassComboBox" ItemsSource="{Binding Models}" SelectedIndex="{Binding ModelIndex, Mode=TwoWay}" />
+              </StackPanel>
+              <StackPanel Spacing="8" Grid.Column="0" Grid.Row="1">
+                <Grid ColumnDefinitions="*,Auto">
+                  <TextBlock Text="{Binding Loc.LfIntensity}" />
+                  <TextBlock Grid.Column="1" Text="{Binding Intensity, StringFormat={}{0:F2}}" />
+                </Grid>
+                <Slider Theme="{StaticResource PillSlider}" Minimum="0" Maximum="1" Value="{Binding Intensity, Mode=TwoWay}" TickFrequency="0.01" IsSnapToTickEnabled="True" />
+              </StackPanel>
+              <StackPanel Spacing="8" Grid.Column="1" Grid.Row="1">
+                <Grid ColumnDefinitions="*,Auto">
+                  <TextBlock Text="{Binding Loc.LfLocalTone}" />
+                  <TextBlock Grid.Column="1" Text="{Binding LocalTone, StringFormat={}{0:F2}}" />
+                </Grid>
+                <Slider Theme="{StaticResource PillSlider}" Minimum="0" Maximum="2" Value="{Binding LocalTone, Mode=TwoWay}" TickFrequency="0.01" IsSnapToTickEnabled="True" />
+              </StackPanel>
+              <StackPanel Spacing="8" Grid.Column="0" Grid.Row="2">
+                <Grid ColumnDefinitions="*,Auto">
+                  <TextBlock Text="{Binding Loc.LfLocalStructure}" />
+                  <TextBlock Grid.Column="1" Text="{Binding LocalStructure, StringFormat={}{0:F2}}" />
+                </Grid>
+                <Slider Theme="{StaticResource PillSlider}" Minimum="0" Maximum="2" Value="{Binding LocalStructure, Mode=TwoWay}" TickFrequency="0.01" IsSnapToTickEnabled="True" />
+              </StackPanel>
+              <StackPanel Spacing="8" Grid.Column="1" Grid.Row="2">
+                <Grid ColumnDefinitions="*,Auto">
+                  <TextBlock Text="{Binding Loc.LfSkinStructure}" />
+                  <TextBlock Grid.Column="1" Text="{Binding SkinStructure, StringFormat={}{0:F2}}" />
+                </Grid>
+                <Slider Theme="{StaticResource PillSlider}" Minimum="-1" Maximum="2.5" Value="{Binding SkinStructure, Mode=TwoWay}" TickFrequency="0.01" IsSnapToTickEnabled="True" />
+              </StackPanel>
+            </Grid>
+          </StackPanel>
+        </Border>
+        <Border x:Name="ColorsCard" Classes="ScreenCard" IsVisible="{Binding ShowColors}" IsEnabled="{Binding IsReady}">
+          <StackPanel Spacing="8">
+            <Grid ColumnDefinitions="*,Auto">
+              <TextBlock Classes="SectionTitle" Text="{Binding Loc.LfColors}" VerticalAlignment="Center" />
+              <Button Grid.Column="1" Classes="SegmentedTab" Content="{Binding Loc.LfColorsReset}" Command="{Binding ResetColorsCommand}"
+                      IsVisible="{Binding HasColors}" Padding="12,4" Focusable="False" />
+            </Grid>
+            <Grid ColumnDefinitions="*,*" ColumnSpacing="20" RowSpacing="10" RowDefinitions="Auto,Auto">
+              <Grid ColumnDefinitions="168,*" ColumnSpacing="12" Grid.Column="0" Grid.Row="0" VerticalAlignment="Center">
+                <TextBlock Text="{Binding BrightnessLabel}" VerticalAlignment="Center" TextTrimming="CharacterEllipsis" />
+                <Slider Grid.Column="1" Theme="{StaticResource PillSlider}" Minimum="-1" Maximum="1" TickFrequency="0.01" IsSnapToTickEnabled="True" Value="{Binding Brightness, Mode=TwoWay}" />
+              </Grid>
+              <Grid ColumnDefinitions="168,*" ColumnSpacing="12" Grid.Column="1" Grid.Row="0" VerticalAlignment="Center">
+                <TextBlock Text="{Binding ContrastLabel}" VerticalAlignment="Center" TextTrimming="CharacterEllipsis" />
+                <Slider Grid.Column="1" Theme="{StaticResource PillSlider}" Minimum="-1" Maximum="1" TickFrequency="0.01" IsSnapToTickEnabled="True" Value="{Binding Contrast, Mode=TwoWay}" />
+              </Grid>
+              <Grid ColumnDefinitions="168,*" ColumnSpacing="12" Grid.Column="0" Grid.Row="1" VerticalAlignment="Center">
+                <TextBlock Text="{Binding SaturationLabel}" VerticalAlignment="Center" TextTrimming="CharacterEllipsis" />
+                <Slider Grid.Column="1" Theme="{StaticResource PillSlider}" Minimum="-1" Maximum="1" TickFrequency="0.01" IsSnapToTickEnabled="True" Value="{Binding Saturation, Mode=TwoWay}" />
+              </Grid>
+              <Grid ColumnDefinitions="168,*" ColumnSpacing="12" Grid.Column="1" Grid.Row="1" VerticalAlignment="Center">
+                <TextBlock Text="{Binding WarmthLabel}" VerticalAlignment="Center" TextTrimming="CharacterEllipsis" />
+                <Slider Grid.Column="1" Theme="{StaticResource PillSlider}" Minimum="-1" Maximum="1" TickFrequency="0.01" IsSnapToTickEnabled="True" Value="{Binding Warmth, Mode=TwoWay}" />
+              </Grid>
+            </Grid>
+          </StackPanel>
+        </Border>
+        <Border x:Name="ComparisonCard" Classes="ScreenCard" IsVisible="{Binding ShowComparison}" IsEnabled="{Binding IsReady}">
+          <StackPanel Spacing="12">
+            <TextBlock Classes="SectionTitle" Text="{Binding Loc.LfComparison}" />
+            <Grid ColumnDefinitions="*,Auto">
+              <TextBlock Text="{Binding Loc.LfBeforeAfterWipe}" />
+              <TextBlock Grid.Column="1" Text="{Binding Split, StringFormat={}{0:P0}}" />
+            </Grid>
+            <Slider Theme="{StaticResource PillSlider}" Minimum="0" Maximum="1" Value="{Binding Split, Mode=TwoWay}" TickFrequency="0.01" IsSnapToTickEnabled="True">
+              <Slider.Resources>
+                <SolidColorBrush x:Key="PillSliderFill" Color="#76B900" />
+                <SolidColorBrush x:Key="PillSliderFillPointerOver" Color="#8ED600" />
+              </Slider.Resources>
+            </Slider>
+          </StackPanel>
+        </Border>
+        <Border x:Name="PresetsCard" Classes="ScreenCard" IsEnabled="{Binding IsReady}" IsVisible="{Binding ShowPresets}">
+          <StackPanel Spacing="12">
+            <TextBlock Classes="SectionTitle" Text="{Binding Loc.LfMyPresets}" />
+            <TextBlock Text="{Binding Error}" IsVisible="{Binding HasError}" Foreground="#FF9C8A" TextWrapping="Wrap" />
+            <Grid ColumnDefinitions="*,*" ColumnSpacing="12">
+              <StackPanel Spacing="6">
+                <TextBlock Text="{Binding Loc.LfPresetName}" />
+                <TextBox Text="{Binding PresetName, Mode=TwoWay}" PlaceholderText="{Binding Loc.LfNameYourPreset}" MaxLength="80" CornerRadius="12" />
+              </StackPanel>
+              <StackPanel Grid.Column="1" Spacing="6">
+                <TextBlock Text="{Binding Loc.LfSavedPresets}" />
+                <ComboBox Classes="GlassComboBox" ItemsSource="{Binding SavedPresets}" SelectedItem="{Binding SelectedPreset, Mode=TwoWay}" PlaceholderText="{Binding Loc.LfChooseAPreset}" MaxDropDownHeight="240" />
+              </StackPanel>
+            </Grid>
+            <Grid ColumnDefinitions="*,*,*,*" ColumnSpacing="8">
+              <Button Classes="AppleSecondaryBtn" Content="{Binding Loc.LfSaveNew}" Command="{Binding SavePresetCommand}" HorizontalAlignment="Stretch" HorizontalContentAlignment="Center" />
+              <Button Grid.Column="1" Classes="AppleSecondaryBtn" Content="{Binding Loc.LfUpdateSelected}" Command="{Binding UpdatePresetCommand}" IsEnabled="{Binding CanDeletePreset}" HorizontalAlignment="Stretch" HorizontalContentAlignment="Center" />
+              <Button Grid.Column="2" Classes="AppleSecondaryBtn" Content="{Binding Loc.LfApply}" Command="{Binding ApplyPresetCommand}" IsEnabled="{Binding CanDeletePreset}" HorizontalAlignment="Stretch" HorizontalContentAlignment="Center" />
+              <Button Grid.Column="3" Classes="AppleSecondaryBtn" Content="{Binding Loc.LfDelete}" Command="{Binding DeletePresetCommand}" IsEnabled="{Binding CanDeletePreset}" HorizontalAlignment="Stretch" HorizontalContentAlignment="Center" />
+            </Grid>
+          </StackPanel>
+        </Border>
+        <Border x:Name="SettingsCard" Classes="ScreenCard" IsEnabled="{Binding IsReady}" IsVisible="{Binding ShowSettings}">
+          <StackPanel Spacing="8">
+            <TextBlock Classes="SectionTitle" Text="{Binding Loc.LfSettings}" />
+            <Grid ColumnDefinitions="*,*" ColumnSpacing="20" RowSpacing="10" RowDefinitions="Auto,Auto">
+              <StackPanel Spacing="8" Grid.Column="0" Grid.Row="0">
+                <TextBlock Text="{Binding Loc.LfProcessingGpu}" />
+                <ComboBox Classes="GlassComboBox" ItemsSource="{Binding Gpus}" SelectedItem="{Binding Gpu, Mode=TwoWay}" />
+              </StackPanel>
+              <StackPanel Spacing="8" Grid.Column="1" Grid.Row="0">
+                <TextBlock Text="{Binding Loc.LfDisplay}" />
+                <ComboBox Classes="GlassComboBox" ItemsSource="{Binding Monitors}" SelectedItem="{Binding Monitor, Mode=TwoWay}" />
+              </StackPanel>
+              <StackPanel Spacing="8" Grid.Column="0" Grid.Row="1" VerticalAlignment="Center">
+                <TextBlock Text="{Binding Loc.LfMotionEstimation}" />
+                <ComboBox Classes="GlassComboBox" ItemsSource="{Binding MotionBackends}" SelectedIndex="{Binding MotionBackendIndex, Mode=TwoWay}" />
+              </StackPanel>
+              <StackPanel Spacing="10" Grid.Column="1" Grid.Row="1" VerticalAlignment="Center">
+                <Grid ColumnDefinitions="*,Auto">
+                  <TextBlock Text="{Binding Loc.LfSkipStaticFrames}" VerticalAlignment="Center" />
+                  <Border Grid.Column="1" CornerRadius="19" Padding="3" Background="#0C1014" BorderBrush="#20FFFFFF" BorderThickness="1" Width="136" Height="38" VerticalAlignment="Center">
+                  <UniformGrid Columns="2">
+                    <Button Classes="SegmentedTab" Classes.Active="{Binding !SkipStatic}" Content="{Binding Loc.LfOff}" Command="{Binding SkipStaticOffCommand}" Padding="8,6" HorizontalAlignment="Stretch" HorizontalContentAlignment="Center" />
+                    <Button Classes="SegmentedTab" Classes.Active="{Binding SkipStatic}" Content="{Binding Loc.LfOn}" Command="{Binding SkipStaticOnCommand}" Padding="8,6" HorizontalAlignment="Stretch" HorizontalContentAlignment="Center" />
+                  </UniformGrid>
+                </Border>
+                </Grid>
+                <Grid ColumnDefinitions="*,Auto">
+                  <TextBlock Text="{Binding Loc.LfHdrCompatibility}" VerticalAlignment="Center" />
+                  <Border Grid.Column="1" CornerRadius="19" Padding="3" Background="#0C1014" BorderBrush="#20FFFFFF" BorderThickness="1" Width="136" Height="38" VerticalAlignment="Center">
+                  <UniformGrid Columns="2">
+                    <Button Classes="SegmentedTab" Classes.Active="{Binding !Hdr}" Content="{Binding Loc.LfOff}" Command="{Binding HdrOffCommand}" Padding="8,6" HorizontalAlignment="Stretch" HorizontalContentAlignment="Center" />
+                    <Button Classes="SegmentedTab" Classes.Active="{Binding Hdr}" Content="{Binding Loc.LfOn}" Command="{Binding HdrOnCommand}" Padding="8,6" HorizontalAlignment="Stretch" HorizontalContentAlignment="Center" />
+                  </UniformGrid>
+                </Border>
+                </Grid>
+              </StackPanel>
+            </Grid>
+          </StackPanel>
+        </Border>
+        <Border x:Name="CaptureCard" Classes="ScreenCard" IsVisible="{Binding ShowCapture}" IsEnabled="{Binding IsReady}">
+          <StackPanel Spacing="8">
+            <TextBlock Text="{Binding Loc.LfCapture}" Classes="SectionTitle" />
+            <Grid ColumnDefinitions="*,*" ColumnSpacing="12" IsEnabled="{Binding CanConfigureCapture}">
+              <StackPanel Spacing="6">
+                <TextBlock Text="{Binding Loc.LfMicrophone}" />
+                <ComboBox Classes="GlassComboBox" ItemsSource="{Binding Microphones}" SelectedItem="{Binding Microphone, Mode=TwoWay}" />
+              </StackPanel>
+              <StackPanel Grid.Column="1" Spacing="6">
+                <TextBlock Text="{Binding Loc.LfRecordingRate}" />
+                <ComboBox Classes="GlassComboBox" ItemsSource="{Binding RecordingRates}" SelectedIndex="{Binding RecordingRateIndex, Mode=TwoWay}" />
+              </StackPanel>
+            </Grid>
+            <CheckBox Content="{Binding Loc.LfSystemAudio}" IsChecked="{Binding SystemAudio, Mode=TwoWay}" IsEnabled="{Binding CanConfigureCapture}" />
+            <Grid ColumnDefinitions="*,Auto" ColumnSpacing="8" IsEnabled="{Binding CanConfigureCapture}">
+              <TextBox Text="{Binding OutputFolder, Mode=TwoWay}" PlaceholderText="Output folder" CornerRadius="12" />
+              <Button Grid.Column="1" Classes="AppleSecondaryBtn" Content="{Binding Loc.LfChooseFolder}" Click="OnChooseOutput" />
+            </Grid>
+            <Grid ColumnDefinitions="*,*,Auto" ColumnSpacing="8">
+              <Button Classes="AppleSecondaryBtn" Content="{Binding Loc.LfScreenshot}" Command="{Binding ScreenshotCommand}" HorizontalAlignment="Stretch" HorizontalContentAlignment="Center" />
+              <Button Grid.Column="1" Classes="AppleSecondaryBtn" Content="{Binding RecordLabel}" Command="{Binding RecordCommand}" HorizontalAlignment="Stretch" HorizontalContentAlignment="Center" />
+              <TextBlock Grid.Column="2" Text="{Binding RecordingTime}" IsVisible="{Binding IsRecording}" Foreground="#EF7777" VerticalAlignment="Center" />
+            </Grid>
+            <TextBlock Text="{Binding CaptureMessage}" FontSize="11" Foreground="#94A3B8" TextWrapping="Wrap" />
+            <Grid ColumnDefinitions="*,Auto">
+              <StackPanel Orientation="Horizontal" Spacing="10" VerticalAlignment="Center">
+                <TextBlock Text="{Binding Loc.LfObsOutputSpout2}" VerticalAlignment="Center" />
+                <!-- Who this is for, and a guide one tap away - rather than a
+                     paragraph of instructions under every other setting. -->
+                <Border Background="#1A7CFFC4" BorderBrush="#447CFFC4" BorderThickness="1" CornerRadius="8"
+                        Padding="8,2" VerticalAlignment="Center">
+                  <TextBlock Text="{Binding Loc.LfForCreators}" FontSize="10" FontWeight="Bold" Foreground="#7CFFC4" />
+                </Border>
+                <Button Classes="SegmentedTab" Padding="12,4" VerticalAlignment="Center" Content="{Binding Loc.LfObsGuide}">
+                  <Button.Flyout>
+                    <Flyout Placement="TopEdgeAlignedLeft">
+                      <Border Classes="ShortcutPanel">
+                        <StackPanel Spacing="12" Width="440">
+                          <TextBlock Text="{Binding Loc.LfObsGuideTitle}" FontWeight="Bold" FontSize="13.5" TextWrapping="Wrap" />
+                          <TextBlock Text="{Binding Loc.LfObsSteps}" FontSize="12" Foreground="#CBD5E1" TextWrapping="Wrap" LineHeight="20" />
+                          <Button Classes="ApplePrimaryBtn" Content="{Binding Loc.LfGetObsSpout2Plugin}"
+                                  Command="{Binding OpenObsPluginCommand}" HorizontalAlignment="Left" />
+                        </StackPanel>
+                      </Border>
+                    </Flyout>
+                  </Button.Flyout>
+                </Button>
+              </StackPanel>
+              <Border Grid.Column="1" CornerRadius="19" Padding="3" Background="#0C1014" BorderBrush="#20FFFFFF" BorderThickness="1" Width="136" Height="38" VerticalAlignment="Center">
+                  <UniformGrid Columns="2">
+                    <Button Classes="SegmentedTab" Classes.Active="{Binding !ExternalOutput}" Content="{Binding Loc.LfOff}" Command="{Binding ExternalOutputOffCommand}" Padding="8,6" HorizontalAlignment="Stretch" HorizontalContentAlignment="Center" />
+                    <Button Classes="SegmentedTab" Classes.Active="{Binding ExternalOutput}" Content="{Binding Loc.LfOn}" Command="{Binding ExternalOutputOnCommand}" Padding="8,6" HorizontalAlignment="Stretch" HorizontalContentAlignment="Center" />
+                  </UniformGrid>
+                </Border>
+            </Grid>
+            <TextBlock x:Name="ObsFooter" Text="{Binding Loc.LfObsHelp}" FontSize="12" Foreground="#94A3B8" TextWrapping="Wrap" />
+            <Button Classes="AppleSecondaryBtn" Content="{Binding Loc.LfGetObsSpout2Plugin}" Command="{Binding OpenObsPluginCommand}" />
+          </StackPanel>
+        </Border>
+      </StackPanel>
+    </Border>
+  </ScrollViewer>
+</UserControl>

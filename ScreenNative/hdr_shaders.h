@@ -1,0 +1,80 @@
+#pragma once
+
+// scRGB uses linear BT.709 primaries; 1.0 is 80 nits. The neural runtime
+// continues to receive SDR. Keep its quantized input as the residual anchor.
+#define NS_HDR_COLOR_FUNCTIONS \
+    "float3 ToLinear(float3 x) { return float3(" \
+    "x.r <= .04045 ? x.r / 12.92 : pow(max((x.r + .055) / 1.055, 0), 2.4)," \
+    "x.g <= .04045 ? x.g / 12.92 : pow(max((x.g + .055) / 1.055, 0), 2.4)," \
+    "x.b <= .04045 ? x.b / 12.92 : pow(max((x.b + .055) / 1.055, 0), 2.4)); }\n" \
+    "float3 ToSrgb(float3 x) { x = max(x, 0); return float3(" \
+    "x.r <= .0031308 ? x.r * 12.92 : 1.055 * pow(x.r, 1.0/2.4) - .055," \
+    "x.g <= .0031308 ? x.g * 12.92 : 1.055 * pow(x.g, 1.0/2.4) - .055," \
+    "x.b <= .0031308 ? x.b * 12.92 : 1.055 * pow(x.b, 1.0/2.4) - .055); }\n" \
+    "float Peak(float3 x) { return max(0, max(x.r, max(x.g, x.b))); }\n"
+
+// rotate180: Desktop Duplication hands back the UNROTATED desktop, so on
+// "Landscape (flipped)" the source is upside down against what the user
+// sees. The frame keeps its size, so reading it from the opposite corner is
+// the whole correction - and it has to happen here, before the network, the
+// optical flow and the gray channel all take their copy (issue #47).
+//
+// isFloat says what an FP16 capture is for:
+//   1  HDR presentation. The 8-bit copy is only the network's proxy; the
+//      composite lifts its change back onto the untouched scRGB frame, and
+//      that lift is built for exactly this Reinhard curve - keep it.
+//   2  SDR presentation (the HDR switch off, or a 10-bit SDR desktop). The
+//      8-bit copy IS the picture people see, so SDR white has to land on
+//      1.0. The Reinhard curve put it at 0.5 - everything half as bright -
+//      and the old 8-bit duplication of an HDR desktop clipped everything
+//      above 80 nits instead, which is the washed-out picture HDR users saw.
+//      Here: scale by the SDR white level, keep everything up to 0.8 exactly,
+//      and roll the highlights above it off smoothly towards 1.0, keeping
+//      the hue (the curve works on the brightest channel).
+static const char kHdrCaptureHlsl[] =
+    NS_HDR_COLOR_FUNCTIONS
+    "float3 SdrFromScRgb(float3 c, float white) {\n"
+    " float3 x = max(c, 0) / max(white, 1e-3);\n"
+    " float p = Peak(x);\n"
+    " if (p > .8) { float q = .8 + .2 * (1 - exp(-(p - .8) / .2)); x *= q / p; }\n"
+    " return ToSrgb(saturate(x)); }\n"
+    "Texture2D<float4> src : register(t0);\n"
+    "RWTexture2D<float4> dst : register(u0);\n"
+    "cbuffer Params : register(b0) { uint isFloat; float white; uint rotate180; };\n"
+    "[numthreads(8,8,1)] void CSMain(uint3 p : SV_DispatchThreadID) {\n"
+    " uint w,h; dst.GetDimensions(w,h); if(p.x>=w || p.y>=h) return;\n"
+    " int2 s = rotate180 ? int2(w-1-p.x, h-1-p.y) : int2(p.xy);\n"
+    " float4 c=src.Load(int3(s,0));\n"
+    " if(isFloat==1) c=float4(ToSrgb(max(c.rgb,0)/(white+Peak(c.rgb))),1);\n"
+    " else if(isFloat==2) c=float4(SdrFromScRgb(c.rgb, white),1);\n"
+    " dst[p.xy]=c; }\n";
+
+static const char kHdrCompositeHlsl[] =
+    NS_HDR_COLOR_FUNCTIONS
+    "Texture2D<float4> nativeFrame : register(t0);\n"
+    "Texture2D<float4> proxyIn : register(t1);\n"
+    "Texture2D<float4> proxyOut : register(t2);\n"
+    "RWTexture2D<float4> dst : register(u0);\n"
+    "cbuffer Params : register(b0) { float white; uint bypass; uint split; uint hdrDisplay; };\n"
+    "[numthreads(8,8,1)] void CSMain(uint3 p : SV_DispatchThreadID) {\n"
+    " uint w,h; dst.GetDimensions(w,h); if(p.x>=w || p.y>=h) return;\n"
+    " float3 original=nativeFrame.Load(int3(p.xy,0)).rgb;\n"
+    " float3 a=ToLinear(proxyIn.Load(int3(p.xy,0)).rgb);\n"
+    " float3 b=ToLinear(proxyOut.Load(int3(p.xy,0)).rgb);\n"
+    " bool raw=bypass || (split!=0xffffffff && p.x<split);\n"
+    // No inverse tone mapping: it becomes singular near white. Lift a bounded
+    // linear residual using the same scale as capture, preserving signed gamut
+    // and highlights exactly when the neural edit is zero.
+    " float3 result=raw ? original : original+(white+Peak(original))*clamp(b-a,-.25,.25);\n"
+    " if(!bypass && split!=0xffffffff && p.x>=split && p.x<split+2)\n"
+    "   result=white*ToLinear(float3(118.0/255.0,185.0/255.0,0));\n"
+    " if(!(hdrDisplay & 1)) result=raw ? a : b;\n"
+    // DLSS-G supports HDR10, not scRGB. Convert linear BT.709 (80 nits/unit)
+    // to BT.2020 and ST.2084, preserving absolute luminance up to 10000 nits.
+    " if(hdrDisplay & 2) {\n"
+    "   float3 rec2020=mul(float3x3(.627404,.329283,.043313,\n"
+    "       .069097,.919540,.011362,.016391,.088013,.895595),result);\n"
+    "   float3 q=pow(saturate(rec2020*.008),2610.0/16384.0);\n"
+    "   result=pow((3424.0/4096.0+(2413.0/128.0)*q)/(1+(2392.0/128.0)*q),2523.0/32.0);\n"
+    " }\n"
+    " dst[p.xy]=float4(clamp(result,-65504,65504),1); }\n";

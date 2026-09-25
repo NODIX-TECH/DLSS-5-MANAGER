@@ -1,0 +1,111 @@
+﻿// Independent persistent histories for sequential NR layers. The original
+// input is immutable; composition and the comparison wipe happen only once.
+// How many layers the slider offers. The first is the feature the worker
+// already has, so the extras are one fewer - and THIS is what the array below
+// has to be sized from. It held two while the slider went to four, so a
+// four-pass run wrote a feature handle past the end of it and then evaluated
+// whatever was there: "[multipass] 4 independent layers ready" followed by a
+// failed evaluate, every time (1.3.2). Six since the round after 1.3.2.
+static constexpr unsigned kMaxPasses = 6;
+static NVSDK_NGX_Handle* g_extra_features[kMaxPasses - 1] = {};
+static ID3D12Resource* g_pass_scratch = nullptr;
+static bool g_pass_ready = false;
+static unsigned g_pass_count = 1;
+
+static void ReleaseMultiPass()
+{
+    for (auto& feature : g_extra_features) {
+        if (feature) SafeReleaseFeature(feature);
+        feature = nullptr;
+    }
+    if (g_pass_scratch) g_pass_scratch->Release();
+    g_pass_scratch = nullptr;
+    g_pass_ready = false;
+    g_pass_count = 1;
+}
+
+static bool EnsureMultiPass(VideoState& v)
+{
+    if (g_pass_ready) return true;
+    char value[8] = {};
+    GetEnvironmentVariableA("DLSS_MANAGER_PASSES", value, sizeof(value));
+    const int count = atoi(value);
+    // Four since 1.3.2, six since the round after: people with cards that can
+    // afford it asked for it. Each pass is another whole run of the network,
+    // so this is a straight multiplier on the frame time - the UI says so
+    // beside the slider.
+    g_pass_count = count >= 1 && count <= (int)kMaxPasses ? count : 1;
+    if (g_pass_count == 1) { g_pass_ready = true; return true; }
+    ID3D12Resource* result = v.nr_small ? v.nr_out : v.output;
+    auto desc = result->GetDesc();
+    D3D12_HEAP_PROPERTIES heap = {};
+    heap.Type = D3D12_HEAP_TYPE_DEFAULT;
+    if (FAILED(h.dev->CreateCommittedResource(&heap, D3D12_HEAP_FLAG_NONE, &desc,
+        D3D12_RESOURCE_STATE_UNORDERED_ACCESS, nullptr, IID_PPV_ARGS(&g_pass_scratch))))
+    {
+        // No room even for the scratch texture: one layer, which is the
+        // feature the worker already has and always works.
+        Log("[multipass] scratch texture failed - running 1 layer");
+        g_pass_count = 1;
+        g_pass_ready = true;
+        return true;
+    }
+    const auto first = h.feature;
+    const int flags = NVSDK_NGX_DLSS_Feature_Flags_MVLowRes | NVSDK_NGX_DLSS_Feature_Flags_AutoExposure |
+                      NVSDK_NGX_DLSS_Feature_Flags_DepthInverted;
+    const unsigned wanted = g_pass_count;
+    for (unsigned i = 0; i < wanted - 1; ++i) {
+        h.feature = nullptr;
+        NVSDK_NGX_Result resultCode = NVSDK_NGX_Result_Fail;
+        const bool ok = CreateFeature(v.w, v.hgt, flags, &resultCode,
+            v.nr_small || !v.upscale ? 0 : v.full_w, v.nr_small || !v.upscale ? 0 : v.full_h);
+        g_extra_features[i] = ok ? h.feature : nullptr;
+        h.feature = first;
+        if (!ok)
+        {
+            // Out of video memory is the usual reason at five or six layers
+            // on an 8 GB card. The layers that were made are kept and run -
+            // failing the whole evaluate here used to end the worker, so
+            // asking for more than the card holds stopped the picture.
+            g_pass_count = i + 1;
+            Log("[multipass] layer %u could not be created (0x%08X) - running %u of %u",
+                i + 2, static_cast<unsigned>(resultCode), g_pass_count, wanted);
+            break;
+        }
+    }
+    if (g_pass_count == 1 && g_pass_scratch) { g_pass_scratch->Release(); g_pass_scratch = nullptr; }
+    g_pass_ready = true;
+    Log("[multipass] %u independent layers ready", g_pass_count);
+    return true;
+}
+
+static NVSDK_NGX_Result EvaluateExtraLayers(ID3D12Resource* result, int reset)
+{
+    NVSDK_NGX_Result status = NVSDK_NGX_Result_Success;
+    for (unsigned i = 0; i < g_pass_count - 1; ++i) {
+        auto read = Transition(result, D3D12_RESOURCE_STATE_UNORDERED_ACCESS,
+                               D3D12_RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE);
+        h.list->ResourceBarrier(1, &read);
+        h.params->Set("DLSSNR.Color", result);
+        h.params->Set("DLSSNR.Output", g_pass_scratch);
+        h.params->Set("DLSSNR.Reset", static_cast<unsigned>(reset));
+        // Avoid repeatedly lifting shadows across layers.
+        h.params->Set("DLSSNR.LocalToneStrength", 0.0f);
+        DWORD exception = 0;
+        __try { status = g_nr_evaluate(h.list, g_extra_features[i], h.params, nullptr); }
+        __except (EXCEPTION_EXECUTE_HANDLER) { exception = GetExceptionCode(); }
+        if (exception || NVSDK_NGX_FAILED(status)) return NVSDK_NGX_Result_Fail;
+        D3D12_RESOURCE_BARRIER copy[] = {
+            Transition(result, D3D12_RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE, D3D12_RESOURCE_STATE_COPY_DEST),
+            Transition(g_pass_scratch, D3D12_RESOURCE_STATE_UNORDERED_ACCESS, D3D12_RESOURCE_STATE_COPY_SOURCE)
+        };
+        h.list->ResourceBarrier(2, copy);
+        h.list->CopyResource(result, g_pass_scratch);
+        D3D12_RESOURCE_BARRIER back[] = {
+            Transition(result, D3D12_RESOURCE_STATE_COPY_DEST, D3D12_RESOURCE_STATE_UNORDERED_ACCESS),
+            Transition(g_pass_scratch, D3D12_RESOURCE_STATE_COPY_SOURCE, D3D12_RESOURCE_STATE_UNORDERED_ACCESS)
+        };
+        h.list->ResourceBarrier(2, back);
+    }
+    return status;
+}

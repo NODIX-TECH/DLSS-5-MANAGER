@@ -27,7 +27,7 @@ open Microsoft.Win32
 module CommunityApi =
 
     [<Literal>]
-    let BaseUrl = "https://dlss5manager-community-api.gtagatgta9.workers.dev"
+    let BaseUrl = "I am granting you access to use the application, but I am not granting you the right to use the servers linked to the community"
 
     /// Must match `wrangler secret put APP_SECRET` on the Worker.
     [<Literal>]

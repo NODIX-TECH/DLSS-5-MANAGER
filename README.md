@@ -12,7 +12,43 @@
 
 [![Download Latest Release](https://img.shields.io/badge/DOWNLOAD-LATEST%20RELEASE%20(V1.3.5)-00e676?style=for-the-badge&logo=github&logoColor=white)](https://github.com/NODIX-TECH/DLSS-5-MANAGER/releases)
 
-[![Buy Me a Coffee at Ko-fi](https://ko-fi.com/img/githubbutton_sm.svg)](https://ko-fi.com/nodix)
+## ❤️ Support the Project
+
+If you enjoy the project and would like to support its development:
+
+### Binance Pay
+**Binance ID:** `1128481244`
+
+### USDT — Any Crypto Wallet
+
+<table>
+  <tr>
+    <td align="center" width="50%">
+      <h3>TRON (TRC20)</h3>
+      <code>THVzzpPqk9Lur6xeNafE5ZKQViZCnpDTne</code>
+      <br><br>
+      <img
+        src="https://github.com/user-attachments/assets/e3373800-2acb-45ad-a939-885d7f92b48b"
+        width="220"
+        alt="USDT TRC20 QR Code"
+      />
+    </td>
+    <td align="center" width="50%">
+      <h3>BNB Smart Chain (BEP20)</h3>
+      <code>0xb2980c33f90e9f56b1a89142921812ce02436bd8</code>
+      <br><br>
+      <img
+        src="https://github.com/user-attachments/assets/83551f2a-9a40-4836-aa84-85083902ff1b"
+        width="220"
+        alt="USDT BEP20 QR Code"
+      />
+    </td>
+  </tr>
+</table>
+
+> ⚠️ **Important:** For USDT transfers, please make sure you select the correct network before sending.
+
+Thank you for supporting the continued development of the project. ❤️
 
 <br>
 <br/>
